@@ -1,0 +1,2851 @@
+<!DOCTYPE html>
+<html lang="bn" class="">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>দিনহিসাব (DinHisab) — Wake-to-Sleep Activity, Expense &amp; Vault</title>
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Fonts: Hind Siliguri + Noto Sans Bengali + Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Hind Siliguri"', '"Noto Sans Bengali"', 'Inter', 'system-ui', 'sans-serif'],
+            display: ['"Noto Sans Bengali"', '"Hind Siliguri"', 'Inter', 'sans-serif'],
+          },
+          colors: {
+            emeraldbrand: {
+              950: '#042F25',
+              900: '#064E3B',
+              800: '#075E4B',
+              700: '#0F766E',
+              600: '#136F78',
+              500: '#148F86',
+              100: '#D1FAE5',
+              50: '#ECFDF5',
+            },
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    * {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: "Hind Siliguri", "Noto Sans Bengali", "Inter", system-ui, sans-serif;
+      font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    }
+
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Subtle scrollbars */
+    .custom-scroll::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: rgba(15, 118, 110, 0.25);
+      border-radius: 9999px;
+    }
+    .dark .custom-scroll::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.28);
+    }
+
+    /* Coastal twilight header horizon art */
+    .coastal-twilight {
+      background:
+        radial-gradient(circle at 78% 24%, rgba(254, 249, 195, 0.92) 0px, rgba(254, 240, 138, 0.35) 18px, rgba(15, 23, 42, 0) 68px),
+        linear-gradient(180deg, #0D2238 0%, #153E52 46%, #1D6368 74%, #E2E8F0 100%);
+    }
+
+    .dark .coastal-twilight {
+      background:
+        radial-gradient(circle at 78% 24%, rgba(254, 249, 195, 0.85) 0px, rgba(254, 240, 138, 0.28) 18px, rgba(2, 6, 23, 0) 68px),
+        linear-gradient(180deg, #071322 0%, #0E293B 48%, #11474E 76%, #0F172A 100%);
+    }
+
+    @keyframes modalSlideUp {
+      from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.985);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .animate-modal {
+      animation: modalSlideUp 0.18s ease-out forwards;
+    }
+
+    @media print {
+      .no-print {
+        display: none !important;
+      }
+      body {
+        background: #ffffff !important;
+        color: #0f172a !important;
+      }
+      .phone-frame {
+        max-width: 100% !important;
+        border: none !important;
+        box-shadow: none !important;
+        margin: 0 !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-[#E6EFEA] dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen antialiased selection:bg-teal-200 selection:text-teal-950">
+
+  <!-- Toast Notification Container (Replaces alert() cleanly) -->
+  <div
+    id="toastContainer"
+    aria-live="polite"
+    class="fixed top-4 left-1/2 -translate-x-1/2 z-[90] flex flex-col gap-2 w-full max-w-[410px] px-3 pointer-events-none no-print"
+  ></div>
+
+  <!-- ===================================================================== -->
+  <!-- CENTERED MOBILE APP FRAME (440px max-width on desktop, full on phone) -->
+  <!-- ===================================================================== -->
+  <div class="phone-frame max-w-[440px] mx-auto min-h-screen bg-[#F4F7F6] dark:bg-slate-950 sm:my-4 sm:min-h-[calc(100vh-2rem)] sm:rounded-[34px] sm:border-[6px] sm:border-slate-900 dark:sm:border-slate-800 sm:shadow-2xl flex flex-col relative overflow-hidden">
+
+    <!-- Sticky Top Utility Strip -->
+    <header class="sticky top-0 z-30 bg-[#075E4B] dark:bg-slate-900/95 backdrop-blur-md text-white px-3.5 py-2 flex items-center justify-between gap-2 border-b border-teal-950/30 dark:border-slate-800 no-print">
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="w-7 h-7 rounded-lg bg-white/15 border border-white/20 flex items-center justify-center font-bold text-sm shrink-0">
+          ৳
+        </span>
+        <div class="min-w-0">
+          <div class="flex items-center gap-1.5">
+            <span id="headerAppTitle" class="text-sm font-bold tracking-tight truncate">দিনহিসাব</span>
+            <span
+              id="sampleBadge"
+              class="hidden text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-amber-300/20 text-amber-200 border border-amber-300/30"
+            >
+              Sample
+            </span>
+          </div>
+          <p id="headerDateSub" class="text-[11px] text-teal-100/90 truncate tabular-nums"></p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-1 shrink-0">
+        <input
+          id="globalDatePicker"
+          type="date"
+          aria-label="Select Date"
+          class="text-[11px] font-semibold bg-white/15 hover:bg-white/25 text-white border border-white/20 rounded-lg px-1.5 py-1 focus:outline-none focus:ring-2 focus:ring-amber-300 cursor-pointer tabular-nums"
+        />
+
+        <button
+          id="langToggleBtn"
+          type="button"
+          title="Switch Bangla / English"
+          class="px-2 py-1 rounded-lg text-[11px] font-bold bg-white/15 hover:bg-white/25 border border-white/20 transition active:scale-95"
+        >
+          বাং / EN
+        </button>
+
+        <button
+          id="themeToggleBtn"
+          type="button"
+          aria-label="Toggle Dark Mode"
+          class="p-1.5 rounded-lg bg-white/15 hover:bg-white/25 border border-white/20 transition active:scale-95"
+        >
+          <svg id="sunIcon" class="w-3.5 h-3.5 hidden" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+          <svg id="moonIcon" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Scrollable Screen Area -->
+    <div class="flex-1 pb-24">
+
+      <!-- =================================================================== -->
+      <!-- TAB 1: হোম (HOME)                                                  -->
+      <!-- =================================================================== -->
+      <section id="view-home" class="p-3 space-y-3.5">
+
+        <!-- Scenic Coastal Twilight Greeting Card (Inspired by screenshot 1 & 5) -->
+        <div class="coastal-twilight rounded-3xl overflow-hidden shadow-md border border-slate-900/15 dark:border-slate-800 text-white relative">
+          <div class="p-4 pb-3 space-y-2.5">
+            <div class="flex items-start justify-between gap-2">
+              <div class="min-w-0">
+                <h1 id="homeGreetingTitle" class="text-xl font-bold tracking-tight truncate">
+                  শুভ সন্ধ্যা, সাইফুল
+                </h1>
+                <p id="homeGregorianDate" class="text-xs text-teal-100/95 mt-0.5 tabular-nums"></p>
+                <p id="homeBanglaHijriDate" class="text-[11px] text-teal-200/85 mt-0.5"></p>
+              </div>
+
+              <div class="flex items-center gap-1.5 shrink-0">
+                <button
+                  id="homeBellSummaryBtn"
+                  type="button"
+                  title="Daily Summary & Alerts"
+                  class="relative w-8 h-8 rounded-full bg-black/25 hover:bg-black/40 border border-white/20 flex items-center justify-center transition active:scale-95"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                  </svg>
+                  <span id="smallSpendDot" class="hidden absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-300"></span>
+                </button>
+
+                <button
+                  id="homeProfileBadgeBtn"
+                  type="button"
+                  title="Customize Profile & Day Times"
+                  class="w-8 h-8 rounded-full bg-slate-900/55 hover:bg-slate-900/75 border border-white/30 flex items-center justify-center text-xs font-bold transition active:scale-95"
+                >
+                  <span id="homeAvatarLetter">সা</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Location Pill & Editable Next Time Chip -->
+            <div class="flex items-center justify-between gap-2 pt-0.5">
+              <button
+                id="homeLocationBtn"
+                type="button"
+                class="inline-flex items-center gap-1 text-xs font-semibold text-white/95 hover:text-amber-200 transition"
+              >
+                <span>📍</span>
+                <span id="homeLocationLabel">ঢাকা</span>
+              </button>
+
+              <button
+                id="homeNextChipBtn"
+                type="button"
+                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900/45 hover:bg-slate-900/65 backdrop-blur-xs border border-white/25 text-xs font-bold tabular-nums transition active:scale-95"
+              >
+                <span>🕌</span>
+                <span id="homeNextChipLabel">এশা ৬:৪১</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Sunrise & Sunset Strip along horizon -->
+          <div class="px-4 py-2 bg-slate-950/35 backdrop-blur-xs border-t border-white/15 flex items-center justify-between text-[11px] font-semibold text-white/95 tabular-nums">
+            <button id="homeSunriseBtn" type="button" class="flex items-center gap-1 hover:text-amber-200">
+              <span>🌅</span>
+              <span id="homeSunriseLabel">সূর্যোদয় ৬:০৫</span>
+            </button>
+            <button id="homeSunsetBtn" type="button" class="flex items-center gap-1 hover:text-amber-200">
+              <span>🌇</span>
+              <span id="homeSunsetLabel">সূর্যাস্ত ৫:১২</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Wake-to-Sleep Quick Milestones Strip -->
+        <div class="grid grid-cols-4 gap-1.5">
+          <button
+            id="quickWakeNowBtn"
+            type="button"
+            class="p-2 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-center hover:border-amber-400 transition active:scale-95"
+          >
+            <div class="text-sm">☀️</div>
+            <div id="lblQuickWake" class="text-[11px] font-bold text-slate-800 dark:text-slate-100 mt-0.5">ঘুম থেকে ওঠা</div>
+            <div id="valQuickWakeTime" class="text-[10px] font-semibold text-amber-700 dark:text-amber-400 tabular-nums">--:--</div>
+          </button>
+
+          <button
+            id="quickAddActHomeBtn"
+            type="button"
+            class="p-2 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-center hover:border-teal-500 transition active:scale-95"
+          >
+            <div class="text-sm">⏱️</div>
+            <div id="lblQuickAct" class="text-[11px] font-bold text-slate-800 dark:text-slate-100 mt-0.5">কাজ যোগ</div>
+            <div id="valQuickActCount" class="text-[10px] font-semibold text-[#136F78] dark:text-teal-400 tabular-nums">0 টি</div>
+          </button>
+
+          <button
+            id="quickAddBuyHomeBtn"
+            type="button"
+            class="p-2 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-center hover:border-emerald-500 transition active:scale-95"
+          >
+            <div class="text-sm">🛍️</div>
+            <div id="lblQuickBuy" class="text-[11px] font-bold text-slate-800 dark:text-slate-100 mt-0.5">খরচ / কেনা</div>
+            <div id="valQuickSpendAmt" class="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 tabular-nums">৳০</div>
+          </button>
+
+          <button
+            id="quickSleepNowBtn"
+            type="button"
+            class="p-2 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 text-center hover:border-indigo-400 transition active:scale-95"
+          >
+            <div class="text-sm">🌙</div>
+            <div id="lblQuickSleep" class="text-[11px] font-bold text-slate-800 dark:text-slate-100 mt-0.5">ঘুমানো</div>
+            <div id="valQuickSleepTime" class="text-[10px] font-semibold text-indigo-700 dark:text-indigo-400 tabular-nums">--:--</div>
+          </button>
+        </div>
+
+        <!-- আজকের কাজ Card (Inspired by screenshot 1: আজকের কাজ, 2/4 শেষ, snooze/call/check, + যোগ করুন, সব কাজ ও দিনলিপি) -->
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-3.5 border border-slate-200/80 dark:border-slate-800 shadow-2xs space-y-2.5">
+          <div class="flex items-center justify-between">
+            <h2 id="homeTasksHeading" class="text-sm font-bold text-slate-900 dark:text-white">আজকের কাজ</h2>
+            <span id="homeTasksDoneBadge" class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 tabular-nums">
+              0/0 শেষ
+            </span>
+          </div>
+
+          <div id="homeTasksList" class="space-y-2"></div>
+
+          <div class="grid grid-cols-2 gap-2 pt-1">
+            <button
+              id="homePlusAddTaskBtn"
+              type="button"
+              class="py-2 px-3 rounded-xl text-xs font-bold bg-[#F8FAFC] dark:bg-slate-800 hover:bg-teal-50 dark:hover:bg-teal-950/50 text-[#075E4B] dark:text-teal-300 border border-slate-200/80 dark:border-slate-700 transition active:scale-98"
+            >
+              + <span id="lblHomeAddBtn">যোগ করুন</span>
+            </button>
+            <button
+              id="homeFullTimelineBtn"
+              type="button"
+              class="py-2 px-3 rounded-xl text-xs font-bold bg-[#F8FAFC] dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700 transition active:scale-98"
+            >
+              <span id="lblHomeFullDiaryBtn">সব কাজ ও দিনলিপি</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Interesting Daily Highlights Strip (Small Spends, Habit Streak, Worth-It Check) -->
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-3.5 border border-slate-200/80 dark:border-slate-800 shadow-2xs space-y-2.5">
+          <div class="flex items-center justify-between">
+            <h2 id="homeHighlightsTitle" class="text-sm font-bold text-slate-900 dark:text-white">আজকের বিশেষ ইনসাইট</h2>
+            <button
+              id="homeOpenDaySummaryBtn"
+              type="button"
+              class="text-xs font-bold text-[#136F78] dark:text-teal-400 hover:underline"
+            >
+              র‍্যাপ সামারি &gt;
+            </button>
+          </div>
+
+          <div id="homeInsightsStrip" class="grid grid-cols-1 gap-2 text-xs"></div>
+        </div>
+
+        <!-- টাকার হিসাব / Quick Money & Activity Bar (Inspired by bottom input in screenshot 1, 2, 5) -->
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-3.5 border border-slate-200/80 dark:border-slate-800 shadow-2xs space-y-2.5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span id="homeMoneyHeading" class="text-sm font-bold text-slate-900 dark:text-white">টাকার হিসাব</span>
+              <span id="homeTodayMoneySummary" class="text-xs font-bold text-rose-700 dark:text-rose-400 tabular-nums"></span>
+            </div>
+            <button
+              id="homeJumpFinanceBtn"
+              type="button"
+              class="text-xs font-bold text-[#136F78] dark:text-teal-400 hover:underline"
+            >
+              হিসাব খুলুন &gt;
+            </button>
+          </div>
+
+          <!-- User-Customizable Quick Buttons -->
+          <div id="homeQuickButtonsRow" class="flex flex-wrap gap-1.5"></div>
+
+          <!-- Quick Natural Entry Form -->
+          <form id="homeQuickEntryForm" class="flex items-center gap-2">
+            <div class="flex-1 flex items-center gap-2 bg-[#F1F5F9] dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 rounded-2xl px-3 py-2 focus-within:ring-2 focus-within:ring-[#136F78]">
+              <span class="text-slate-400 text-sm">⌨️</span>
+              <input
+                id="homeQuickEntryInput"
+                type="text"
+                placeholder='লিখুন — যেমন "দুপুরে ভাত ১৫০ টাকা" বা "বই কিনলাম ৪২০"'
+                class="w-full bg-transparent text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none"
+              />
+            </div>
+            <button
+              id="homeQuickSubmitBtn"
+              type="submit"
+              title="Quick Log"
+              class="w-10 h-10 rounded-2xl bg-[#136F78] hover:bg-[#0F5C64] text-white flex items-center justify-center shrink-0 shadow-xs transition active:scale-95"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- TAB 2: দিনলিপি (WAKE-TO-SLEEP TIMELINE & NIGHTLY WRAP-UP)          -->
+      <!-- =================================================================== -->
+      <section id="view-diary" class="hidden p-3 space-y-3.5">
+
+        <!-- Top Controls & Category Filter -->
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-3.5 border border-slate-200/80 dark:border-slate-800 space-y-3">
+          <div class="flex items-center justify-between gap-2">
+            <div>
+              <h2 id="diaryHeading" class="text-base font-bold text-slate-900 dark:text-white">দিনলিপি ও টাইমলাইন</h2>
+              <p id="diaryWakeSleepSpan" class="text-xs text-slate-500 dark:text-slate-400 tabular-nums"></p>
+            </div>
+            <button
+              id="diaryAddActivityBtn"
+              type="button"
+              class="px-3 py-2 rounded-xl text-xs font-bold bg-[#075E4B] hover:bg-[#064A3B] text-white transition active:scale-95"
+            >
+              + নতুন কাজ / সময়
+            </button>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <select
+              id="diaryCategoryFilter"
+              aria-label="Filter timeline category"
+              class="flex-1 text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2"
+            ></select>
+            <button
+              id="diaryOpenWrapBtn"
+              type="button"
+              class="px-3 py-2 rounded-xl text-xs font-bold bg-slate-900 dark:bg-teal-700 text-white transition active:scale-95"
+            >
+              🌙 ঘুমের র‍্যাপ
+            </button>
+          </div>
+        </div>
+
+        <!-- Wake-to-Sleep Chronological Timeline -->
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-3.5 border border-slate-200/80 dark:border-slate-800 space-y-3">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            ঘুম থেকে ওঠা থেকে রাতের ঘুম পর্যন্ত (Wake-to-Sleep)
+          </h3>
+          <div id="diaryTimelineList" class="space-y-2.5"></div>
+        </div>
+
+        <!-- Nightly Sleep & Day Wrap-Up Card -->
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-3.5 border border-slate-200/80 dark:border-slate-800 space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-slate-900 dark:text-white">রাতের ঘুম ও দিনের র‍্যাপ-আপ</h3>
+            <span id="diaryAwakeDurationTag" class="text-xs font-bold text-[#075E4B] dark:text-teal-400 tabular-nums"></span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label for="wrapWakeTimeInput" class="block text-[11px] font-semibold text-slate-500 mb-1">ঘুম থেকে ওঠা</label>
+              <input id="wrapWakeTimeInput" type="time" class="w-full text-xs font-bold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-2 tabular-nums" />
+            </div>
+            <div>
+              <label for="wrapSleepTimeInput" class="block text-[11px] font-semibold text-slate-500 mb-1">রাতের ঘুম</label>
+              <input id="wrapSleepTimeInput" type="time" class="w-full text-xs font-bold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-2 tabular-nums" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5">
+            <div>
+              <label for="wrapMoodSelect" class="block text-[11px] font-semibold text-slate-500 mb-1">মুড (Mood 1–5)</label>
+              <select id="wrapMoodSelect" class="w-full text-xs font-bold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-2">
+                <option value="5">😄 ৫ — দারুণ</option>
+                <option value="4">🙂 ৪ — ভালো</option>
+                <option value="3">😐 ৩ — স্বাভাবিক</option>
+                <option value="2">😕 ২ — ক্লান্ত</option>
+                <option value="1">😫 ১ — চাপের</option>
+              </select>
+            </div>
+            <div>
+              <label for="wrapEnergySelect" class="block text-[11px] font-semibold text-slate-500 mb-1">এনার্জি (Energy 1–5)</label>
+              <select id="wrapEnergySelect" class="w-full text-xs font-bold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-2">
+                <option value="5">⚡ ৫ — ফুল এনার্জি</option>
+                <option value="4">🔋 ৪ — সতেজ</option>
+                <option value="3">🌤️ ৩ — মাঝারি</option>
+                <option value="2">🪫 ২ — কম</option>
+                <option value="1">😴 ১ — নিঃশেষ</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label for="wrapReflectionInput" class="block text-[11px] font-semibold text-slate-500 mb-1">রাতের রিফ্লেকশন / সারাদিনের নোট</label>
+            <textarea
+              id="wrapReflectionInput"
+              rows="2"
+              placeholder="আজ কী শিখলেন, কী ভালো গেল বা আগামীকালের প্রধান কাজ..."
+              class="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-2.5"
+            ></textarea>
+          </div>
+
+          <div class="flex items-center justify-between gap-2 pt-1">
+            <button id="saveWrapUpBtn" type="button" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-[#075E4B] text-white">
+              সেভ করুন
+            </button>
+            <div class="flex items-center gap-1.5">
+              <button id="copyRecapBtn" type="button" class="px-3 py-2 rounded-xl text-xs font-bold bg-[#136F78] text-white">
+                কপি সামারি
+              </button>
+              <button type="button" onclick="window.print()" class="px-3 py-2 rounded-xl text-xs font-bold bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-100">
+                প্রিন্ট
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- TAB 3: হিসাব (EXPENSES, ITEMS BOUGHT, INCOME & LOANS / ধা-দেনা)   -->
+      <!-- =================================================================== -->
+      <section id="view-hisab" class="hidden p-3 space-y-3.5">
+
+        <!-- Header & 3 Sub-Tabs (Inspired by screenshot 2: আয়-ব্যয় | কেনাকাটা | ধার-দেনা) -->
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-3 border border-slate-200/80 dark:border-slate-800 space-y-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-base font-bold text-slate-900 dark:text-white">হিসাব</h2>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400">আয়-ব্যয়, কেনাকাটা ও ধার-দেনা এক জায়গায়</p>
+            </div>
+            <button
+              id="hisabOpenTxBtn"
+              type="button"
+              class="px-3 py-1.5 rounded-xl text-xs font-bold bg-[#136F78] hover:bg-[#0F5C64] text-white transition active:scale-95"
+            >
+              + নতুন লেনদেন
+            </button>
+          </div>
+
+          <div class="grid grid-cols-3 gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+            <button id="subTabLedger" type="button" class="py-1.5 px-2 rounded-lg text-xs font-bold bg-white dark:bg-slate-900 text-[#075E4B] dark:text-teal-300 shadow-2xs transition">
+              আয়-ব্যয়
+            </button>
+            <button id="subTabBought" type="button" class="py-1.5 px-2 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 transition">
+              কেনাকাটা
+            </button>
+            <button id="subTabLoans" type="button" class="py-1.5 px-2 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 transition">
+              ধার-দেনা
+            </button>
+          </div>
+        </div>
+
+        <!-- SUB-PANEL 3A: আয়-ব্যয় (Income vs Expense, Cash vs Digital, Categories) -->
+        <div id="hisabPanel-ledger" class="space-y-3">
+          <div class="bg-white dark:bg-slate-900 rounded-2xl p-3.5 border border-slate-200/80 dark:border-slate-800 space-y-3">
+            <div class="grid grid-cols-2 gap-2.5">
+              <div class="p-2.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-800/50">
+                <span class="text-[11px] text-emerald-800 dark:text-emerald-300">আয়</span>
+                <p id="ledgerIncomeTotal" class="text-base font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">৳০</p>
+              </div>
+              <div class="p-2.5 rounded-xl bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200/60 dark:border-rose-800/50">
+                <span class="text-[11px] text-rose-800 dark:text-rose-300">খরচ</span>
+                <p id="ledgerExpenseTotal" class="text-base font-bold text-rose-700 dark:text-rose-400 tabular-nums">৳০</p>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between text-xs text-slate-600 dark:text-slate-300 pt-1 border-t border-slate-100 dark:border-slate-800 tabular-nums">
+              <span id="ledgerCashDigitalText">নগদ: ৳০ • ডিজিটাল: ৳০</span>
+              <span id="ledgerNetBalanceText" class="font-bold text-[#075E4B] dark:text-teal-400">নেট: ৳০</span>
+            </div>
+
+            <!-- Category Breakdown Bars -->
+            <div id="ledgerCategoryBars" class="space-y-2 pt-1"></div>
+          </div>
+
+          <!-- Transactions List -->
+          <div class="bg-white dark:bg-slate-900 rounded-2xl p-3.5 border border-slate-200/80 dark:border-slate-800 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">লেনদেনের তালিকা</h3>
+              <span id="ledgerTxCount" class="text-xs font-semibold text-slate-500 tabular-nums">0 টি</span>
+            </div>
+            <div id="ledgerTransactionsList" class="space-y-2"></div>
+          </div>
+        </div>
+
+        <!-- SUB-PANEL 3B: কেনাকাটা (Physical Items Bought & Worth It Check) -->
+        <div id="hisabPanel-bought" class="hidden space-y-3">
+          <div class="bg-white dark:bg-slate-900 rounded-2xl p-3.5 border border-slate-200/80 dark:border-slate-800 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-sm font-bold text-slate-900 dark:text-white">কেনা জিনিসপত্র (Items Bought)</h3>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400">কী কী কিনলেন, দাম কত ও "Worth It?" স্ট্যাটাস মার্ক করুন</p>
+              </div>
+              <span id="boughtItemsTotalBadge" class="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 tabular-nums">৳০</span>
+            </div>
+            <div id="boughtItemsList" class="space-y-2"></div>
+          </div>
+        </div>
+
+        <!-- SUB-PANEL 3C: ধার-দেনা (Loans: আমি পাব / আমি দেব) -->
+        <div id="hisabPanel-loans" class="hidden space-y-3">
+          <div class="bg-white dark:bg-slate-900 rounded-2xl p-3.5 border border-slate-200/80 dark:border-slate-800 space-y-3">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-bold text-slate-900 dark:text-white">ধার-দেনার হিসাব</h3>
+              <button id="hisabAddLoanBtn" type="button" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-[#136F78] text-white">
+                + নতুন লেনদেন
+              </button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2.5">
+              <div class="p-3 rounded-xl bg-teal-50/70 dark:bg-teal-950/35 border border-teal-200/70 dark:border-teal-800/50">
+                <span class="text-[11px] text-teal-800 dark:text-teal-300">আমি পাব</span>
+                <p id="loansGetTotal" class="text-lg font-bold text-[#0F766E] dark:text-teal-400 tabular-nums">৳০</p>
+              </div>
+              <div class="p-3 rounded-xl bg-amber-50/70 dark:bg-amber-950/35 border border-amber-200/70 dark:border-amber-800/50">
+                <span class="text-[11px] text-amber-800 dark:text-amber-300">আমি দেব</span>
+                <p id="loansGiveTotal" class="text-lg font-bold text-amber-700 dark:text-amber-400 tabular-nums">৳০</p>
+              </div>
+            </div>
+
+            <div id="loansPeopleList" class="space-y-2"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- TAB 4: আমার তথ্য (MY VAULT: DOCUMENTS FOLDERS & LOCAL SECRETS)      -->
+      <!-- =================================================================== -->
+      <section id="view-vault" class="hidden p-3 space-y-3.5">
+
+        <!-- Vault Sub-Tabs (Inspired by screenshot 3: ডকুমেন্টস | গোপন নোট) -->
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-3 border border-slate-200/80 dark:border-slate-800 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-base font-bold text-slate-900 dark:text-white">আমার তথ্য (লোকাল ভল্ট)</h2>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400">শুধু এই ব্রাউজারে সংরক্ষিত — কোনো ক্লাউড বা গুগল নেই</p>
+            </div>
+            <button id="vaultAddFolderBtn" type="button" class="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-teal-50 dark:bg-teal-950/50 text-[#075E4B] dark:text-teal-300 border border-teal-200/70">
+              + ফোল্ডার
+            </button>
+          </div>
+
+          <div class="grid grid-cols-2 gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+            <button id="vaultTabDocs" type="button" class="py-1.5 px-2 rounded-lg text-xs font-bold bg-white dark:bg-slate-900 text-[#075E4B] dark:text-teal-300 shadow-2xs">
+              📁 ডকুমেন্টস
+            </button>
+            <button id="vaultTabSecrets" type="button" class="py-1.5 px-2 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300">
+              🔒 গোপন নোট (PIN)
+            </button>
+          </div>
+        </div>
+
+        <!-- SUB-PANEL 4A: Document Folders Grid (Inspired by screenshot 3) -->
+        <div id="vaultPanel-docs" class="space-y-3">
+          <div class="bg-white dark:bg-slate-900 rounded-2xl p-3.5 border border-slate-200/80 dark:border-slate-800 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-500">ফোল্ডারসমূহ</span>
+              <button id="vaultAddDocRecordBtn" type="button" class="text-xs font-bold text-[#136F78] dark:text-teal-400 hover:underline">
+                + ডকুমেন্ট নোট যোগ
+              </button>
+            </div>
+
+            <div id="vaultFoldersGrid" class="grid grid-cols-3 gap-2"></div>
+          </div>
+
+          <div class="bg-white dark:bg-slate-900 rounded-2xl p-3.5 border border-slate-200/80 dark:border-slate-800 space-y-2">
+            <div class="flex items-center justify-between">
+              <h3 id="vaultActiveFolderHeading" class="text-xs font-bold text-slate-800 dark:text-slate-200">সব ডকুমেন্ট</h3>
+              <button id="vaultResetFolderFilterBtn" type="button" class="text-[11px] font-bold text-[#136F78] hover:underline">সব দেখুন</button>
+            </div>
+            <div id="vaultDocItemsList" class="space-y-2"></div>
+          </div>
+        </div>
+
+        <!-- SUB-PANEL 4B: PIN-Protected Local Secret Notes -->
+        <div id="vaultPanel-secrets" class="hidden space-y-3">
+          <div class="bg-white dark:bg-slate-900 rounded-2xl p-3.5 border border-slate-200/80 dark:border-slate-800 space-y-3">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-bold text-slate-900 dark:text-white">গোপন তথ্য ও নোট</h3>
+              <button id="vaultLockToggleBtn" type="button" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-100 dark:bg-slate-800">
+                লক
+              </button>
+            </div>
+
+            <div id="vaultPinGate" class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 text-center space-y-2.5">
+              <p class="text-xs font-bold text-slate-700 dark:text-slate-200">🔒 লোকাল PIN দিয়ে আনলক করুন (ডিফল্ট: 1234)</p>
+              <div class="flex items-center justify-center gap-2">
+                <input id="vaultPinEntry" type="password" inputmode="numeric" maxlength="8" placeholder="PIN" class="w-28 text-center text-sm font-bold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl px-2.5 py-1.5" />
+                <button id="vaultUnlockSubmitBtn" type="button" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-[#075E4B] text-white">
+                  আনলক
+                </button>
+              </div>
+            </div>
+
+            <div id="vaultSecretsUnlockedArea" class="hidden space-y-2.5">
+              <button id="vaultAddSecretBtn" type="button" class="w-full py-2 rounded-xl text-xs font-bold bg-[#136F78] text-white">
+                + নতুন গোপন নোট যোগ করুন
+              </button>
+              <div id="vaultSecretsList" class="space-y-2"></div>
+              <div class="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 text-xs">
+                <span class="text-slate-500">নতুন PIN:</span>
+                <div class="flex items-center gap-1.5">
+                  <input id="vaultNewPinInput" type="password" inputmode="numeric" maxlength="8" placeholder="4+ digit" class="w-24 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1" />
+                  <button id="vaultSaveNewPinBtn" type="button" class="px-2.5 py-1 rounded-lg font-bold bg-slate-200 dark:bg-slate-700">সেভ</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================================================================== -->
+      <!-- TAB 5: আরও (MORE: CUSTOMIZATION, HABITS & LOCAL BACKUP)            -->
+      <!-- =================================================================== -->
+      <section id="view-more" class="hidden p-3 space-y-3.5">
+
+        <!-- Daily Habits & Streaks Card -->
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-3.5 border border-slate-200/80 dark:border-slate-800 space-y-2.5">
+          <h2 class="text-sm font-bold text-slate-900 dark:text-white">দৈনিক অভ্যাস ও স্ট্রিক (Habits)</h2>
+          <form id="moreAddHabitForm" class="flex gap-2">
+            <input id="moreHabitInput" type="text" required placeholder="নতুন অভ্যাস (যেমন: হাঁটা ২০ মিনিট, পড়া)" class="flex-1 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2" />
+            <button type="submit" class="px-3 py-2 rounded-xl text-xs font-bold bg-[#075E4B] text-white">যোগ</button>
+          </form>
+          <div id="moreHabitsList" class="space-y-1.5"></div>
+        </div>
+
+        <!-- User Customization (Categories, Payment Modes, Purchase Tags, Quick Buttons, Target) -->
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-3.5 border border-slate-200/80 dark:border-slate-800 space-y-3">
+          <h2 class="text-sm font-bold text-slate-900 dark:text-white">কাস্টমাইজেশন (নিজের মতো সাজান)</h2>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label for="cfgTargetInput" class="block text-[11px] font-semibold text-slate-500 mb-1">দৈনিক খরচের টার্গেট (৳)</label>
+              <input id="cfgTargetInput" type="number" min="1" step="any" class="w-full text-xs font-bold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-2 tabular-nums" />
+            </div>
+            <div>
+              <label for="cfgNameInput" class="block text-[11px] font-semibold text-slate-500 mb-1">আপনার নাম</label>
+              <input id="cfgNameInput" type="text" class="w-full text-xs font-bold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-2" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label for="cfgCityInput" class="block text-[11px] font-semibold text-slate-500 mb-1">শহর / এলাকা</label>
+              <input id="cfgCityInput" type="text" class="w-full text-xs font-bold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-2" />
+            </div>
+            <div>
+              <label for="cfgNextChipInput" class="block text-[11px] font-semibold text-slate-500 mb-1">হোম টাইম চিপ</label>
+              <input id="cfgNextChipInput" type="text" class="w-full text-xs font-bold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-2" />
+            </div>
+          </div>
+
+          <!-- Add Activity Category (Icon + Color + Name) -->
+          <form id="cfgAddActCatForm" class="flex items-center gap-1.5 pt-1">
+            <input id="cfgActIcon" type="text" value="🎯" maxlength="4" aria-label="Icon" class="w-10 text-center text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl py-2" />
+            <input id="cfgActColor" type="color" value="#0F766E" aria-label="Color" class="w-9 h-8 rounded-lg border-0 bg-transparent cursor-pointer" />
+            <input id="cfgActName" type="text" required placeholder="নতুন কাজের ক্যাটাগরি" class="flex-1 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-2" />
+            <button type="submit" class="px-3 py-2 rounded-xl text-xs font-bold bg-[#075E4B] text-white">+ কাজ</button>
+          </form>
+          <div id="cfgActCatChips" class="flex flex-wrap gap-1.5"></div>
+
+          <!-- Add Expense / Item Category -->
+          <form id="cfgAddExpCatForm" class="flex items-center gap-1.5 pt-1">
+            <input id="cfgExpCatName" type="text" required placeholder="নতুন খরচের / কেনাকাটার খাত" class="flex-1 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-2" />
+            <button type="submit" class="px-3 py-2 rounded-xl text-xs font-bold bg-[#136F78] text-white">+ খাত</button>
+          </form>
+          <div id="cfgExpCatChips" class="flex flex-wrap gap-1.5"></div>
+
+          <!-- Add 1-Tap Quick Button -->
+          <form id="cfgAddQuickBtnForm" class="flex items-center gap-1.5 pt-1">
+            <input id="cfgQbIcon" type="text" value="⚡" maxlength="4" aria-label="Quick button icon" class="w-10 text-center text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl py-2" />
+            <input id="cfgQbLabel" type="text" required placeholder="১-ট্যাপ বাটন নাম" class="flex-1 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-2" />
+            <input id="cfgQbAmount" type="number" min="0" step="any" placeholder="৳" class="w-16 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2 py-2 tabular-nums" />
+            <button type="submit" class="px-2.5 py-2 rounded-xl text-xs font-bold bg-amber-600 text-white">+ বাটন</button>
+          </form>
+          <div id="cfgQuickBtnsList" class="space-y-1"></div>
+        </div>
+
+        <!-- Local Storage Backup, Export & Reset (Strictly Local - No Google) -->
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-3.5 border border-slate-200/80 dark:border-slate-800 space-y-2.5">
+          <div>
+            <h2 class="text-sm font-bold text-slate-900 dark:text-white">লোকাল ব্যাকআপ ও এক্সপোর্ট</h2>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400">সব তথ্য এই ব্রাউজারে সংরক্ষিত; JSON বা CSV ফাইলে সেভ ও রিস্টোর করুন</p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <button id="btnExportJson" type="button" class="py-2 px-3 rounded-xl text-xs font-bold bg-[#136F78] text-white">
+              ⬇️ JSON ব্যাকআপ
+            </button>
+            <label class="py-2 px-3 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 text-center cursor-pointer">
+              ⬆️ JSON রিস্টোর
+              <input id="inputImportJson" type="file" accept=".json,application/json" class="hidden" />
+            </label>
+            <button id="btnExportCsv" type="button" class="py-2 px-3 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100">
+              📄 CSV হিসাব
+            </button>
+            <button type="button" onclick="window.print()" class="py-2 px-3 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100">
+              🖨️ প্রিন্ট / PDF
+            </button>
+          </div>
+
+          <div class="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+            <button id="btnLoadSample" type="button" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-200/70">
+              নমুনা ডাটা লোড
+            </button>
+            <button id="btnClearSample" type="button" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border border-rose-200/70">
+              সব ডাটা মুছুন
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- BOTTOM NAVIGATION BAR (হোম | দিনলিপি | হিসাব | আমার তথ্য | আরও)      -->
+    <!-- ===================================================================== -->
+    <nav
+      aria-label="Primary Bottom Navigation"
+      class="fixed sm:sticky bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200/90 dark:border-slate-800 no-print"
+    >
+      <div class="grid grid-cols-5 px-1 py-1.5">
+        <button data-nav="home" type="button" class="bottom-nav-btn flex flex-col items-center justify-center py-1 rounded-xl text-[#136F78] dark:text-teal-400 font-bold transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+          </svg>
+          <span id="navTextHome" class="text-[11px] mt-0.5">হোম</span>
+        </button>
+
+        <button data-nav="diary" type="button" class="bottom-nav-btn flex flex-col items-center justify-center py-1 rounded-xl text-slate-500 dark:text-slate-400 font-medium transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <span id="navTextDiary" class="text-[11px] mt-0.5">দিনলিপি</span>
+        </button>
+
+        <button data-nav="hisab" type="button" class="bottom-nav-btn flex flex-col items-center justify-center py-1 rounded-xl text-slate-500 dark:text-slate-400 font-medium transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+          </svg>
+          <span id="navTextHisab" class="text-[11px] mt-0.5">হিসাব</span>
+        </button>
+
+        <button data-nav="vault" type="button" class="bottom-nav-btn flex flex-col items-center justify-center py-1 rounded-xl text-slate-500 dark:text-slate-400 font-medium transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+          </svg>
+          <span id="navTextVault" class="text-[11px] mt-0.5">আমার তথ্য</span>
+        </button>
+
+        <button data-nav="more" type="button" class="bottom-nav-btn flex flex-col items-center justify-center py-1 rounded-xl text-slate-500 dark:text-slate-400 font-medium transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+          <span id="navTextMore" class="text-[11px] mt-0.5">আরও</span>
+        </button>
+      </div>
+    </nav>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL A: ADD / EDIT ACTIVITY                                          -->
+  <!-- ===================================================================== -->
+  <div id="activityModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/60 backdrop-blur-xs p-3 overflow-y-auto no-print">
+    <div class="animate-modal bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden my-auto">
+      <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+        <h3 id="activityModalTitle" class="text-sm font-bold text-slate-900 dark:text-white">কাজ ও সময় যোগ করুন</h3>
+        <button id="closeActivityModalBtn" type="button" class="p-1 text-slate-400 hover:text-slate-700">✕</button>
+      </div>
+
+      <form id="activityForm" class="p-4 space-y-3 max-h-[82vh] overflow-y-auto custom-scroll">
+        <input type="hidden" id="actEditId" />
+
+        <div>
+          <label for="actTitleInput" class="block text-xs font-semibold mb-1">কাজের নাম / বিবরণ *</label>
+          <input id="actTitleInput" type="text" required placeholder="যেমন: ঘুম থেকে ওঠা, অফিস/ক্লাস, বাজার, ঘুমানো" class="w-full text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label for="actStartInput" class="block text-xs font-semibold mb-1">শুরুর সময় *</label>
+            <input id="actStartInput" type="time" required class="w-full text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 tabular-nums" />
+          </div>
+          <div>
+            <label for="actEndInput" class="block text-xs font-semibold mb-1">শেষের সময়</label>
+            <input id="actEndInput" type="time" class="w-full text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 tabular-nums" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label for="actCategorySelect" class="block text-xs font-semibold mb-1">ক্যাটাগরি</label>
+            <select id="actCategorySelect" class="w-full text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2"></select>
+          </div>
+          <div>
+            <label for="actShowHomeSelect" class="block text-xs font-semibold mb-1">হোম টাস্কে দেখাবে?</label>
+            <select id="actShowHomeSelect" class="w-full text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2">
+              <option value="yes">হ্যাঁ</option>
+              <option value="no">শুধু দিনলিপিতে</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label for="actNotesInput" class="block text-xs font-semibold mb-1">নোট</label>
+          <textarea id="actNotesInput" rows="2" placeholder="অতিরিক্ত কোনো নোট..." class="w-full text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2"></textarea>
+        </div>
+
+        <!-- Optional Linked Expense -->
+        <div class="p-3 rounded-xl bg-teal-50/70 dark:bg-teal-950/30 border border-teal-200/70 dark:border-teal-800/50 space-y-2">
+          <label class="flex items-center gap-2 cursor-pointer text-xs font-bold text-[#075E4B] dark:text-teal-300">
+            <input id="actAttachExpenseCheck" type="checkbox" class="w-4 h-4 rounded" />
+            <span>এই কাজের সাথে খরচ/কেনাকাটা যুক্ত করুন</span>
+          </label>
+          <div id="actAttachExpenseBox" class="hidden space-y-2 pt-1">
+            <div class="grid grid-cols-2 gap-2">
+              <input id="actInlineAmt" type="number" min="0" step="any" placeholder="টাকা (৳)" class="text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 tabular-nums" />
+              <select id="actInlineCat" class="text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5"></select>
+            </div>
+            <input id="actInlineItem" type="text" placeholder="কী কিনলেন বা খরচ হলো? (ঐচ্ছিক)" class="w-full text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5" />
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-1">
+          <button type="button" id="cancelActivityModalBtn" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800">বাতিল</button>
+          <button type="submit" class="px-4 py-2 rounded-xl text-xs font-bold bg-[#075E4B] text-white">সেভ করুন</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL B: ADD / EDIT TRANSACTION & ITEM BOUGHT                        -->
+  <!-- ===================================================================== -->
+  <div id="txModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/60 backdrop-blur-xs p-3 overflow-y-auto no-print">
+    <div class="animate-modal bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden my-auto">
+      <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+        <h3 id="txModalTitle" class="text-sm font-bold text-slate-900 dark:text-white">নতুন আয় / খরচ / কেনাকাটা</h3>
+        <button id="closeTxModalBtn" type="button" class="p-1 text-slate-400 hover:text-slate-700">✕</button>
+      </div>
+
+      <form id="txForm" class="p-4 space-y-3 max-h-[82vh] overflow-y-auto custom-scroll">
+        <input type="hidden" id="txEditId" />
+
+        <div class="grid grid-cols-2 gap-2">
+          <button id="txKindExpenseBtn" type="button" class="py-2 rounded-xl text-xs font-bold bg-rose-600 text-white">
+            খরচ / কেনাকাটা
+          </button>
+          <button id="txKindIncomeBtn" type="button" class="py-2 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
+            আয় (Income)
+          </button>
+        </div>
+        <input type="hidden" id="txKindInput" value="expense" />
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label for="txAmountInput" class="block text-xs font-semibold mb-1">টাকার পরিমাণ (৳) *</label>
+            <input id="txAmountInput" type="number" min="0.01" step="any" required placeholder="150" class="w-full text-sm font-bold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 tabular-nums" />
+          </div>
+          <div>
+            <label for="txCategorySelect" class="block text-xs font-semibold mb-1">খাত</label>
+            <select id="txCategorySelect" class="w-full text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2"></select>
+          </div>
+        </div>
+
+        <div>
+          <label for="txTitleInput" class="block text-xs font-semibold mb-1">কী কিনলেন বা বিবরণ *</label>
+          <input id="txTitleInput" type="text" required placeholder="যেমন: দুপুরের খাবার, বই ও কলম, বাস ভাড়া" class="w-full text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label for="txPaymentSelect" class="block text-xs font-semibold mb-1">পেমেন্ট মাধ্যম</label>
+            <select id="txPaymentSelect" class="w-full text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2"></select>
+          </div>
+          <div>
+            <label for="txTagSelect" class="block text-xs font-semibold mb-1">ধরন (Need/Planned/Impulse)</label>
+            <select id="txTagSelect" class="w-full text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2"></select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5 items-center">
+          <div>
+            <label for="txLinkedActSelect" class="block text-xs font-semibold mb-1">টাইমলাইন কাজের সাথে যুক্ত</label>
+            <select id="txLinkedActSelect" class="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-2"></select>
+          </div>
+          <label class="flex items-center gap-2 cursor-pointer pt-4 text-xs font-semibold">
+            <input id="txIsBoughtItemCheck" type="checkbox" class="w-4 h-4 rounded" />
+            <span>কেনা জিনিস (Item Bought)</span>
+          </label>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-1">
+          <button type="button" id="cancelTxModalBtn" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800">বাতিল</button>
+          <button type="submit" class="px-4 py-2 rounded-xl text-xs font-bold bg-[#136F78] text-white">সেভ করুন</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL C: DYNAMIC FORM MODAL (LOANS / VAULT / DOCS / DAY SUMMARY)      -->
+  <!-- ===================================================================== -->
+  <div id="dynamicModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/60 backdrop-blur-xs p-3 overflow-y-auto">
+    <div class="animate-modal bg-white dark:bg-slate-900 w-full max-w-md rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden my-auto">
+      <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between no-print">
+        <h3 id="dynamicModalTitle" class="text-sm font-bold text-slate-900 dark:text-white"></h3>
+        <button id="closeDynamicModalBtn" type="button" class="p-1 text-slate-400 hover:text-slate-700">✕</button>
+      </div>
+      <div id="dynamicModalBody" class="p-4 space-y-3 max-h-[82vh] overflow-y-auto custom-scroll text-xs sm:text-sm"></div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- APPLICATION JAVASCRIPT                                                -->
+  <!-- ===================================================================== -->
+  <script>
+    (function () {
+      'use strict';
+
+      const STORAGE_KEY = 'dinhisab_mobile_app_v1';
+
+      function toDateKey(dt) {
+        const y = dt.getFullYear();
+        const m = String(dt.getMonth() + 1).padStart(2, '0');
+        const d = String(dt.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      }
+
+      function shiftDateKey(dateKey, delta) {
+        const [y, m, d] = dateKey.split('-').map(Number);
+        return toDateKey(new Date(y, m - 1, d + delta));
+      }
+
+      function formatGregorianDate(dateKey, lang) {
+        const [y, m, d] = dateKey.split('-').map(Number);
+        const dt = new Date(y, m - 1, d);
+        if (lang === 'en') {
+          return dt.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+        }
+        return dt.toLocaleDateString('bn-BD', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+      }
+
+      function getBanglaAndHijriText(dateKey) {
+        const [y, m, d] = dateKey.split('-').map(Number);
+        const dt = new Date(y, m - 1, d);
+        try {
+          const bn = new Intl.DateTimeFormat('bn-BD-u-ca-beng', { day: 'numeric', month: 'long', year: 'numeric' }).format(dt);
+          const hijri = new Intl.DateTimeFormat('bn-BD-u-ca-islamic-umalqura', { day: 'numeric', month: 'long', year: 'numeric' }).format(dt);
+          return `${bn} বঙ্গাব্দ • ${hijri}`;
+        } catch (_err) {
+          return `${d}/${m}/${y}`;
+        }
+      }
+
+      function nowHHMM() {
+        const n = new Date();
+        return `${String(n.getHours()).padStart(2, '0')}:${String(n.getMinutes()).padStart(2, '0')}`;
+      }
+
+      function format12h(hhmm, lang) {
+        if (!hhmm || !hhmm.includes(':')) return '--:--';
+        const [hS, mS] = hhmm.split(':');
+        const h = Number(hS);
+        const m = Number(mS);
+        if (Number.isNaN(h) || Number.isNaN(m)) return hhmm;
+        const h12 = h % 12 === 0 ? 12 : h % 12;
+        if (lang === 'en') {
+          return `${h12}:${String(m).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`;
+        }
+        const period = h < 6 ? 'ভোর' : h < 12 ? 'সকাল' : h < 16 ? 'দুপুর' : h < 18 ? 'বিকাল' : 'রাত';
+        return `${period} ${h12}:${String(m).padStart(2, '0')}`;
+      }
+
+      function diffMinutes(startHHMM, endHHMM) {
+        if (!startHHMM || !endHHMM || !startHHMM.includes(':') || !endHHMM.includes(':')) return null;
+        const [sh, sm] = startHHMM.split(':').map(Number);
+        const [eh, em] = endHHMM.split(':').map(Number);
+        let diff = (eh * 60 + em) - (sh * 60 + sm);
+        if (diff < 0) diff += 24 * 60;
+        return diff;
+      }
+
+      function formatDur(mins, lang) {
+        if (mins === null || mins === undefined || Number.isNaN(mins)) return '';
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
+        if (lang === 'en') return h > 0 ? `${h}h ${m}m` : `${m}m`;
+        return h > 0 ? `${h} ঘণ্টা ${m} মিনিট` : `${m} মিনিট`;
+      }
+
+      function formatBDT(num) {
+        const val = Number(num) || 0;
+        const txt = Number.isInteger(val)
+          ? val.toLocaleString('en-US')
+          : val.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+        return `৳${txt}`;
+      }
+
+      function escapeHTML(str) {
+        return String(str ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function uid(prefix) {
+        return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+      }
+
+      function createInitialState() {
+        const today = toDateKey(new Date());
+        const yesterday = shiftDateKey(today, -1);
+
+        return {
+          lang: 'bn',
+          theme: 'light',
+          isSampleData: true,
+          userName: 'সাইফুল',
+          city: 'ঢাকা',
+          sunrise: '৬:০৫',
+          sunset: '৫:১২',
+          nextChip: 'এশা ৬:৪১',
+          dailyTarget: 1000,
+          vaultPin: '1234',
+          vaultUnlocked: false,
+          activityCategories: [
+            { id: 'ac_wake', name: 'ঘুম ও রুটিন', icon: '🌅', color: '#075E4B' },
+            { id: 'ac_work', name: 'কাজ ও পড়া', icon: '💻', color: '#136F78' },
+            { id: 'ac_move', name: 'যাতায়াত', icon: '🚌', color: '#D97706' },
+            { id: 'ac_shop', name: 'কেনাকাটা ও বাজার', icon: '🛍️', color: '#059669' },
+            { id: 'ac_rest', name: 'বিশ্রাম ও পরিবার', icon: '☕', color: '#4F46E5' },
+          ],
+          expenseCategories: [
+            'খাবার ও নাস্তা',
+            'কেনাকাটা / জিনিসপত্র',
+            'যাতায়াত',
+            'বিল ও পড়া',
+            'আয়',
+            'অন্যান্য',
+          ],
+          paymentModes: ['নগদ', 'বিকাশ / নগদ', 'ব্যাংক / কার্ড'],
+          purchaseTags: ['প্রয়োজন (Need)', 'পরিকল্পিত (Planned)', 'হুটহাট (Impulse)'],
+          quickButtons: [
+            { id: 'qb_1', icon: '☕', label: 'চা ও নাস্তা', amount: 30, actCat: 'বিশ্রাম ও পরিবার', expCat: 'খাবার ও নাস্তা', isBought: false },
+            { id: 'qb_2', icon: '🛺', label: 'রিকশা ভাড়া', amount: 40, actCat: 'যাতায়াত', expCat: 'যাতায়াত', isBought: false },
+            { id: 'qb_3', icon: '📘', label: 'বই / নোট কিনলাম', amount: 180, actCat: 'কেনাকাটা ও বাজার', expCat: 'কেনাকাটা / জিনিসপত্র', isBought: true },
+          ],
+          habits: [
+            { id: 'hb_1', title: 'সকালে সময়মতো ওঠা ও হাঁটা' },
+            { id: 'hb_2', title: 'পড়াশোনা / কাজের ফোকাস সেশন' },
+            { id: 'hb_3', title: 'রাতে স্ক্রিন অফ ও সময়মতো ঘুম' },
+          ],
+          days: {
+            [today]: {
+              wakeTime: '06:40',
+              sleepTime: '',
+              mood: 4,
+              energy: 4,
+              reflection: 'সকালে ঠিকমতো উঠে কাজ শুরু করেছি। বিকেলে কেনাকাটা ও হিসাব আপডেট রেখেছি।',
+              completedHabits: { hb_1: true, hb_2: true, hb_3: false },
+              activities: [
+                {
+                  id: 'act_1',
+                  startTime: '06:40',
+                  endTime: '07:30',
+                  title: 'ঘুম থেকে ওঠা ও সকালের রুটিন',
+                  category: 'ঘুম ও রুটিন',
+                  showOnHome: true,
+                  completed: true,
+                  notes: 'ফজরের পর হালকা হাঁটা ও নাস্তা।',
+                },
+                {
+                  id: 'act_2',
+                  startTime: '09:00',
+                  endTime: '13:00',
+                  title: 'কাজ ও প্রজেক্ট সেশন',
+                  category: 'কাজ ও পড়া',
+                  showOnHome: true,
+                  completed: true,
+                  notes: 'গুরুত্বপূর্ণ কাজ সম্পন্ন।',
+                },
+                {
+                  id: 'act_3',
+                  startTime: '20:00',
+                  endTime: '20:30',
+                  title: 'আম্মাকে ফোন',
+                  category: 'বিশ্রাম ও পরিবার',
+                  showOnHome: true,
+                  completed: false,
+                  notes: 'রাত ৮টার রিমাইন্ডার।',
+                },
+                {
+                  id: 'act_4',
+                  startTime: '16:30',
+                  endTime: '17:30',
+                  title: 'বাজার ও জিনিসপত্র কেনাকাটা',
+                  category: 'কেনাকাটা ও বাজার',
+                  showOnHome: true,
+                  completed: false,
+                  notes: 'নোটবুক ও দুপুরের/রাতের খাবার।',
+                },
+              ],
+              transactions: [
+                {
+                  id: 'tx_1',
+                  kind: 'expense',
+                  amount: 150,
+                  title: 'দুপুরের ভাত ও তরকারি',
+                  category: 'খাবার ও নাস্তা',
+                  paymentMode: 'নগদ',
+                  tag: 'প্রয়োজন (Need)',
+                  isBoughtItem: false,
+                  worthIt: 'worth',
+                  linkedActivityId: 'act_2',
+                },
+                {
+                  id: 'tx_2',
+                  kind: 'expense',
+                  amount: 240,
+                  title: 'হার্ডকভার নোটবুক ও কলম',
+                  category: 'কেনাকাটা / জিনিসপত্র',
+                  paymentMode: 'বিকাশ / নগদ',
+                  tag: 'পরিকল্পিত (Planned)',
+                  isBoughtItem: true,
+                  worthIt: 'worth',
+                  linkedActivityId: 'act_4',
+                },
+                {
+                  id: 'tx_3',
+                  kind: 'expense',
+                  amount: 35,
+                  title: 'বিকেলের চা ও বিস্কুট',
+                  category: 'খাবার ও নাস্তা',
+                  paymentMode: 'নগদ',
+                  tag: 'হুটহাট (Impulse)',
+                  isBoughtItem: false,
+                  worthIt: 'later',
+                  linkedActivityId: 'act_4',
+                },
+              ],
+            },
+            [yesterday]: {
+              wakeTime: '07:00',
+              sleepTime: '23:15',
+              mood: 4,
+              energy: 3,
+              reflection: 'গতকাল সময়মতো ঘুমিয়েছি।',
+              completedHabits: { hb_1: true, hb_2: true, hb_3: true },
+              activities: [
+                { id: 'act_y1', startTime: '07:00', endTime: '08:00', title: 'ঘুম থেকে ওঠা', category: 'ঘুম ও রুটিন', showOnHome: false, completed: true, notes: '' },
+                { id: 'act_y2', startTime: '23:15', endTime: '', title: 'ঘুমানো', category: 'ঘুম ও রুটিন', showOnHome: false, completed: true, notes: '' },
+              ],
+              transactions: [
+                { id: 'tx_y1', kind: 'expense', amount: 45, title: 'রিকশা ভাড়া', category: 'যাতায়াত', paymentMode: 'নগদ', tag: 'প্রয়োজন (Need)', isBoughtItem: false, worthIt: 'worth', linkedActivityId: '' },
+              ],
+            },
+          },
+          loans: [
+            {
+              id: 'ln_1',
+              person: 'করিম ভাই',
+              direction: 'give', // আমি দেব
+              totalAmount: 2000,
+              settledAmount: 500,
+              dueDate: '2026-12-05',
+              note: 'বই ও কোর্স বাবদ',
+            },
+            {
+              id: 'ln_2',
+              person: 'রবিন',
+              direction: 'get', // আমি পাব
+              totalAmount: 1500,
+              settledAmount: 0,
+              dueDate: '2026-12-10',
+              note: 'ধার দিয়েছিলাম',
+            },
+          ],
+          docFolders: [
+            { id: 'f_bank', name: 'ব্যাংক কার্ড', icon: '💳', countLabel: '০টা' },
+            { id: 'f_nid', name: 'জাতীয় পরিচয়পত্র', icon: '🪪', countLabel: '১টা' },
+            { id: 'f_pass', name: 'পাসপোর্ট', icon: '📘', countLabel: '০টা' },
+            { id: 'f_land', name: 'জমি ও বাড়ির কাগজ', icon: '🏡', countLabel: '০টা' },
+            { id: 'f_bill', name: 'বিল ও রসিদ', icon: '🧾', countLabel: '১টা' },
+            { id: 'f_cert', name: 'সার্টিফিকেট', icon: '🎓', countLabel: '০টা' },
+            { id: 'f_med', name: 'চিকিৎসা', icon: '🩺', countLabel: '০টা' },
+            { id: 'f_pres', name: 'প্রেসক্রিপশন', icon: '💊', countLabel: '০টা' },
+            { id: 'f_war', name: 'ওয়ারেন্টি ও গ্যারান্টি', icon: '🛡️', countLabel: '১টা' },
+            { id: 'f_car', name: 'গাড়ি ও লাইসেন্স', icon: '🚗', countLabel: '০টা' },
+            { id: 'f_fam', name: 'পরিবারের ছবি', icon: '🖼️', countLabel: '০টা' },
+            { id: 'f_oth', name: 'অন্যান্য', icon: '📁', countLabel: '০টা' },
+          ],
+          docRecords: [
+            {
+              id: 'dr_1',
+              folderId: 'f_nid',
+              title: 'NID রেফারেন্স নোট',
+              expiryDate: '',
+              note: 'মূল কপি ও ফটোকপি নিরাপদ ফাইলে আছে',
+            },
+            {
+              id: 'dr_2',
+              folderId: 'f_war',
+              title: 'ইলেকট্রনিক্স ওয়ারেন্টি রসিদ',
+              expiryDate: '2027-06-30',
+              note: 'মেমো নম্বর #DH-1048',
+            },
+          ],
+          secrets: [
+            {
+              id: 'sc_1',
+              title: 'বিকাশ / ওয়ালেট নোট',
+              account: 'পার্সোনাল',
+              note: 'হেল্পলাইন ১৬২৪৭ • লোকাল ব্রাউজার ভল্টে সেভ করা',
+            },
+          ],
+        };
+      }
+
+      function loadAppState() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return createInitialState();
+          const parsed = JSON.parse(raw);
+          const base = createInitialState();
+          return {
+            ...base,
+            ...parsed,
+            days: parsed.days && typeof parsed.days === 'object' ? parsed.days : base.days,
+            loans: Array.isArray(parsed.loans) ? parsed.loans : base.loans,
+            docFolders: Array.isArray(parsed.docFolders) && parsed.docFolders.length > 0 ? parsed.docFolders : base.docFolders,
+            docRecords: Array.isArray(parsed.docRecords) ? parsed.docRecords : base.docRecords,
+            secrets: Array.isArray(parsed.secrets) ? parsed.secrets : base.secrets,
+            habits: Array.isArray(parsed.habits) ? parsed.habits : base.habits,
+            activityCategories: Array.isArray(parsed.activityCategories) && parsed.activityCategories.length > 0 ? parsed.activityCategories : base.activityCategories,
+            expenseCategories: Array.isArray(parsed.expenseCategories) && parsed.expenseCategories.length > 0 ? parsed.expenseCategories : base.expenseCategories,
+            paymentModes: Array.isArray(parsed.paymentModes) && parsed.paymentModes.length > 0 ? parsed.paymentModes : base.paymentModes,
+            purchaseTags: Array.isArray(parsed.purchaseTags) && parsed.purchaseTags.length > 0 ? parsed.purchaseTags : base.purchaseTags,
+            quickButtons: Array.isArray(parsed.quickButtons) ? parsed.quickButtons : base.quickButtons,
+          };
+        } catch (e) {
+          console.error('Load state error:', e);
+          return createInitialState();
+        }
+      }
+
+      let state = loadAppState();
+      let selectedDate = toDateKey(new Date());
+      let activeTab = 'home';
+      let activeHisabSub = 'ledger';
+      let activeVaultSub = 'docs';
+      let selectedFolderId = 'all';
+
+      function saveAppState() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        } catch (e) {
+          console.error('Save state error:', e);
+          showToast('স্টোরেজে সেভ করা যায়নি।', 'error');
+        }
+      }
+
+      function showToast(msg, type = 'success') {
+        const box = document.getElementById('toastContainer');
+        if (!box) return;
+        const cls = type === 'error'
+          ? 'bg-rose-600 text-white'
+          : type === 'info'
+          ? 'bg-slate-800 text-white'
+          : 'bg-[#075E4B] text-white';
+        const el = document.createElement('div');
+        el.className = `${cls} px-3.5 py-2 rounded-2xl shadow-lg text-xs font-bold animate-modal pointer-events-auto text-center`;
+        el.textContent = msg;
+        box.appendChild(el);
+        setTimeout(() => {
+          el.style.opacity = '0';
+          el.style.transition = 'opacity 0.2s ease';
+          setTimeout(() => el.remove(), 220);
+        }, 2400);
+      }
+
+      function ensureDay(dk) {
+        if (!state.days[dk]) {
+          state.days[dk] = {
+            wakeTime: '',
+            sleepTime: '',
+            mood: 4,
+            energy: 4,
+            reflection: '',
+            completedHabits: {},
+            activities: [],
+            transactions: [],
+          };
+        }
+        if (!Array.isArray(state.days[dk].activities)) state.days[dk].activities = [];
+        if (!Array.isArray(state.days[dk].transactions)) state.days[dk].transactions = [];
+        if (!state.days[dk].completedHabits || typeof state.days[dk].completedHabits !== 'object') {
+          state.days[dk].completedHabits = {};
+        }
+        return state.days[dk];
+      }
+
+      function applyTheme() {
+        const root = document.documentElement;
+        const sun = document.getElementById('sunIcon');
+        const moon = document.getElementById('moonIcon');
+        if (state.theme === 'dark') {
+          root.classList.add('dark');
+          sun?.classList.remove('hidden');
+          moon?.classList.add('hidden');
+        } else {
+          root.classList.remove('dark');
+          sun?.classList.add('hidden');
+          moon?.classList.remove('hidden');
+        }
+      }
+
+      function computeDayFinance(dayRec) {
+        let income = 0;
+        let expense = 0;
+        let cashSpend = 0;
+        let digitalSpend = 0;
+        const boughtItems = [];
+
+        (dayRec.transactions || []).forEach((tx) => {
+          const amt = Number(tx.amount) || 0;
+          if (tx.kind === 'income') {
+            income += amt;
+          } else {
+            expense += amt;
+            if (tx.paymentMode === 'নগদ' || /cash/i.test(tx.paymentMode || '')) {
+              cashSpend += amt;
+            } else {
+              digitalSpend += amt;
+            }
+            if (tx.isBoughtItem || /কেনাকাটা|item|bought/i.test(tx.category || '')) {
+              boughtItems.push(tx);
+            }
+          }
+        });
+
+        const boughtTotal = boughtItems.reduce((s, x) => s + (Number(x.amount) || 0), 0);
+        return { income, expense, cashSpend, digitalSpend, boughtItems, boughtTotal };
+      }
+
+      function computeHabitStreak(habitId, dk) {
+        let streak = 0;
+        let cur = dk;
+        for (let i = 0; i < 365; i++) {
+          const rec = state.days[cur];
+          if (rec && rec.completedHabits && rec.completedHabits[habitId]) {
+            streak += 1;
+            cur = shiftDateKey(cur, -1);
+          } else {
+            break;
+          }
+        }
+        return streak;
+      }
+
+      function getSmallSpendsSummary() {
+        let count = 0;
+        let total = 0;
+        Object.values(state.days || {}).forEach((d) => {
+          (d.transactions || []).forEach((tx) => {
+            if (tx.kind !== 'income') {
+              const amt = Number(tx.amount) || 0;
+              if (amt > 0 && amt <= 100) {
+                count += 1;
+                total += amt;
+              }
+            }
+          });
+        });
+        return { count, total };
+      }
+
+      function syncDropdowns() {
+        const actCatSel = document.getElementById('actCategorySelect');
+        const diaryFilter = document.getElementById('diaryCategoryFilter');
+        const txCatSel = document.getElementById('txCategorySelect');
+        const inlineCatSel = document.getElementById('actInlineCat');
+        const paySel = document.getElementById('txPaymentSelect');
+        const tagSel = document.getElementById('txTagSelect');
+        const linkSel = document.getElementById('txLinkedActSelect');
+
+        if (actCatSel) {
+          const prev = actCatSel.value;
+          actCatSel.innerHTML = state.activityCategories
+            .map((c) => `<option value="${escapeHTML(c.name)}">${escapeHTML(c.icon)} ${escapeHTML(c.name)}</option>`)
+            .join('');
+          if (prev) actCatSel.value = prev;
+        }
+
+        if (diaryFilter) {
+          const prev = diaryFilter.value || 'All';
+          diaryFilter.innerHTML = `<option value="All">${state.lang === 'en' ? 'All Categories' : 'সব ক্যাটাগরি'}</option>` +
+            state.activityCategories
+              .map((c) => `<option value="${escapeHTML(c.name)}">${escapeHTML(c.icon)} ${escapeHTML(c.name)}</option>`)
+              .join('');
+          diaryFilter.value = prev;
+        }
+
+        [txCatSel, inlineCatSel].forEach((sel) => {
+          if (!sel) return;
+          const prev = sel.value;
+          sel.innerHTML = state.expenseCategories.map((c) => `<option value="${escapeHTML(c)}">${escapeHTML(c)}</option>`).join('');
+          if (prev) sel.value = prev;
+        });
+
+        if (paySel) {
+          const prev = paySel.value;
+          paySel.innerHTML = state.paymentModes.map((m) => `<option value="${escapeHTML(m)}">${escapeHTML(m)}</option>`).join('');
+          if (prev) paySel.value = prev;
+        }
+
+        if (tagSel) {
+          const prev = tagSel.value;
+          tagSel.innerHTML = state.purchaseTags.map((t) => `<option value="${escapeHTML(t)}">${escapeHTML(t)}</option>`).join('');
+          if (prev) tagSel.value = prev;
+        }
+
+        if (linkSel) {
+          const dayRec = ensureDay(selectedDate);
+          const prev = linkSel.value;
+          linkSel.innerHTML = `<option value="">-- ${state.lang === 'en' ? 'None' : 'যুক্ত নয়'} --</option>` +
+            dayRec.activities.map((a) => `<option value="${escapeHTML(a.id)}">${escapeHTML(a.startTime)} • ${escapeHTML(a.title)}</option>`).join('');
+          if (prev) linkSel.value = prev;
+        }
+      }
+
+      function applyLanguageLabels() {
+        const en = state.lang === 'en';
+        document.getElementById('headerAppTitle').textContent = en ? 'DinHisab' : 'দিনহিসাব';
+        document.getElementById('navTextHome').textContent = en ? 'Home' : 'হোম';
+        document.getElementById('navTextDiary').textContent = en ? 'Diary' : 'দিনলিপি';
+        document.getElementById('navTextHisab').textContent = en ? 'Hisab' : 'হিসাব';
+        document.getElementById('navTextVault').textContent = en ? 'My Vault' : 'আমার তথ্য';
+        document.getElementById('navTextMore').textContent = en ? 'More' : 'আরও';
+
+        document.getElementById('lblQuickWake').textContent = en ? 'Wake Up' : 'ঘুম থেকে ওঠা';
+        document.getElementById('lblQuickAct').textContent = en ? 'Activity' : 'কাজ যোগ';
+        document.getElementById('lblQuickBuy').textContent = en ? 'Expense/Buy' : 'খরচ / কেনা';
+        document.getElementById('lblQuickSleep').textContent = en ? 'Sleep' : 'ঘুমানো';
+
+        document.getElementById('homeTasksHeading').textContent = en ? "Today's Tasks" : 'আজকের কাজ';
+        document.getElementById('lblHomeAddBtn').textContent = en ? 'Add' : 'যোগ করুন';
+        document.getElementById('lblHomeFullDiaryBtn').textContent = en ? 'All Tasks & Diary' : 'সব কাজ ও দিনলিপি';
+        document.getElementById('homeHighlightsTitle').textContent = en ? 'Daily Highlights' : 'আজকের বিশেষ ইনসাইট';
+        document.getElementById('homeMoneyHeading').textContent = en ? 'Money & Quick Log' : 'টাকার হিসাব';
+        document.getElementById('homeQuickEntryInput').placeholder = en
+          ? 'Type e.g. "Lunch 150" or "Bought book 420"'
+          : 'লিখুন — যেমন "দুপুরে ভাত ১৫০ টাকা" বা "বই কিনলাম ৪২০"';
+      }
+
+      function renderHome() {
+        const dayRec = ensureDay(selectedDate);
+        const fin = computeDayFinance(dayRec);
+        const en = state.lang === 'en';
+
+        const hr = new Date().getHours();
+        const name = state.userName || (en ? 'Saiful' : 'সাইফুল');
+        const greet = en
+          ? `${hr < 12 ? 'Good Morning' : hr < 17 ? 'Good Afternoon' : 'Good Evening'}, ${name}`
+          : `${hr < 6 ? 'শুভ ভোর' : hr < 12 ? 'শুভ সকাল' : hr < 15 ? 'শুভ দুপুর' : hr < 18 ? 'শুভ বিকাল' : 'শুভ সন্ধ্যা'}, ${name}`;
+
+        document.getElementById('homeGreetingTitle').textContent = greet;
+        document.getElementById('homeAvatarLetter').textContent = name.trim().charAt(0) || 'আ';
+        document.getElementById('homeGregorianDate').textContent = formatGregorianDate(selectedDate, state.lang);
+        document.getElementById('homeBanglaHijriDate').textContent = getBanglaAndHijriText(selectedDate);
+        document.getElementById('homeLocationLabel').textContent = state.city || 'ঢাকা';
+        document.getElementById('homeNextChipLabel').textContent = state.nextChip || 'এশা ৬:৪১';
+        document.getElementById('homeSunriseLabel').textContent = en ? `Sunrise ${state.sunrise}` : `সূর্যোদয় ${state.sunrise}`;
+        document.getElementById('homeSunsetLabel').textContent = en ? `Sunset ${state.sunset}` : `সূর্যাস্ত ${state.sunset}`;
+
+        document.getElementById('valQuickWakeTime').textContent = dayRec.wakeTime ? format12h(dayRec.wakeTime, state.lang) : '--:--';
+        document.getElementById('valQuickSleepTime').textContent = dayRec.sleepTime ? format12h(dayRec.sleepTime, state.lang) : '--:--';
+        document.getElementById('valQuickActCount').textContent = `${dayRec.activities.length} ${en ? 'act' : 'টি'}`;
+        document.getElementById('valQuickSpendAmt').textContent = formatBDT(fin.expense);
+
+        // Today's Tasks on Home
+        const homeTasks = dayRec.activities.filter((a) => a.showOnHome !== false);
+        const doneCount = homeTasks.filter((t) => Boolean(t.completed)).length;
+        document.getElementById('homeTasksDoneBadge').textContent = `${doneCount}/${homeTasks.length} ${en ? 'done' : 'শেষ'}`;
+
+        const tasksEl = document.getElementById('homeTasksList');
+        if (homeTasks.length === 0) {
+          tasksEl.innerHTML = `<p class="text-xs text-slate-400 text-center py-3">${en ? 'No tasks yet. Tap "+ Add".' : 'আজকের তালিকায় কোনো কাজ নেই। "+ যোগ করুন" চাপুন।'}</p>`;
+        } else {
+          tasksEl.innerHTML = homeTasks.slice(0, 4).map((t) => `
+            <div class="flex items-center justify-between gap-2 p-2.5 rounded-2xl bg-[#F8FAFC] dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60">
+              <div class="min-w-0 flex-1">
+                <p class="text-[11px] font-bold text-[#136F78] dark:text-teal-400 tabular-nums">
+                  ${escapeHTML(format12h(t.startTime, state.lang))}
+                </p>
+                <p class="text-xs sm:text-sm font-bold truncate ${t.completed ? 'line-through text-slate-400' : 'text-slate-900 dark:text-white'}">
+                  ${escapeHTML(t.title)}
+                </p>
+              </div>
+              <div class="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  title="Snooze 15m"
+                  onclick="window.__snoozeAct('${t.id}')"
+                  class="w-7 h-7 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[10px] font-bold text-slate-600 dark:text-slate-300"
+                >
+                  +15m
+                </button>
+                <button
+                  type="button"
+                  title="Edit"
+                  onclick="window.__openEditAct('${t.id}')"
+                  class="w-7 h-7 rounded-full bg-[#136F78] text-white text-xs font-bold flex items-center justify-center"
+                >
+                  ✎
+                </button>
+                <button
+                  type="button"
+                  title="Done"
+                  onclick="window.__toggleActDone('${t.id}')"
+                  class="w-7 h-7 rounded-full border-2 flex items-center justify-center text-xs font-bold transition ${
+                    t.completed
+                      ? 'bg-[#075E4B] border-[#075E4B] text-white'
+                      : 'border-slate-300 dark:border-slate-600 text-transparent hover:border-[#075E4B]'
+                  }"
+                >
+                  ✓
+                </button>
+              </div>
+            </div>
+          `).join('');
+        }
+
+        // Interesting Daily Highlights (Small Spends, Top Streak, Worth-It Check)
+        const small = getSmallSpendsSummary();
+        document.getElementById('smallSpendDot').classList.toggle('hidden', small.count === 0);
+
+        const maxStreak = state.habits.reduce((best, h) => Math.max(best, computeHabitStreak(h.id, selectedDate)), 0);
+        const worthCount = fin.boughtItems.filter((i) => i.worthIt === 'worth').length;
+
+        document.getElementById('homeInsightsStrip').innerHTML = `
+          <div class="flex items-center justify-between p-2 rounded-xl bg-amber-50/70 dark:bg-amber-950/25 border border-amber-200/60 dark:border-amber-800/40">
+            <span class="font-semibold text-amber-900 dark:text-amber-200">⚡ ${en ? 'Small Spends (≤৳100)' : 'ছোট খরচের হিসাব (≤৳১০০)'}</span>
+            <span class="font-bold text-amber-800 dark:text-amber-300 tabular-nums">${small.count} ${en ? 'tx' : 'টি'} • ${formatBDT(small.total)}</span>
+          </div>
+          <div class="flex items-center justify-between p-2 rounded-xl bg-teal-50/70 dark:bg-teal-950/25 border border-teal-200/60 dark:border-teal-800/40">
+            <span class="font-semibold text-teal-900 dark:text-teal-200">🔥 ${en ? 'Best Habit Streak' : 'সেরা অভ্যাস স্ট্রিক'} • ${en ? 'Worth It' : 'কাজে লাগা'}</span>
+            <span class="font-bold text-[#075E4B] dark:text-teal-300 tabular-nums">${maxStreak}d • ${worthCount}/${fin.boughtItems.length} ${en ? 'items' : 'জিনিস'}</span>
+          </div>
+        `;
+
+        // Quick buttons & Money summary
+        document.getElementById('homeTodayMoneySummary').textContent =
+          `${en ? 'Spend' : 'খরচ'}: ${formatBDT(fin.expense)} / ${formatBDT(state.dailyTarget)}`;
+
+        document.getElementById('homeQuickButtonsRow').innerHTML = (state.quickButtons || []).map((qb) => `
+          <button
+            type="button"
+            onclick="window.__runQuickBtn('${qb.id}')"
+            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 hover:bg-teal-50 dark:hover:bg-teal-950/60 text-slate-800 dark:text-slate-100 border border-slate-200/70 dark:border-slate-700 transition active:scale-95"
+          >
+            <span>${escapeHTML(qb.icon || '⚡')}</span>
+            <span>${escapeHTML(qb.label)}</span>
+            ${Number(qb.amount) > 0 ? `<span class="text-emerald-700 dark:text-emerald-400 tabular-nums">${formatBDT(qb.amount)}</span>` : ''}
+          </button>
+        `).join('');
+      }
+
+      function renderDiary() {
+        const dayRec = ensureDay(selectedDate);
+        const en = state.lang === 'en';
+        const awakeMins = diffMinutes(dayRec.wakeTime, dayRec.sleepTime);
+
+        document.getElementById('diaryWakeSleepSpan').textContent =
+          `${en ? 'Wake' : 'ওঠা'}: ${dayRec.wakeTime ? format12h(dayRec.wakeTime, state.lang) : '--:--'}  •  ${en ? 'Sleep' : 'ঘুম'}: ${dayRec.sleepTime ? format12h(dayRec.sleepTime, state.lang) : '--:--'}`;
+        document.getElementById('diaryAwakeDurationTag').textContent =
+          awakeMins !== null ? `${en ? 'Awake' : 'জাগ্রত'}: ${formatDur(awakeMins, state.lang)}` : '';
+
+        const filterCat = document.getElementById('diaryCategoryFilter').value || 'All';
+        const acts = [...dayRec.activities]
+          .filter((a) => filterCat === 'All' || a.category === filterCat)
+          .sort((a, b) => (a.startTime || '00:00').localeCompare(b.startTime || '00:00'));
+
+        const listEl = document.getElementById('diaryTimelineList');
+        if (acts.length === 0) {
+          listEl.innerHTML = `<p class="text-xs text-slate-400 text-center py-5">${en ? 'No timeline items logged yet.' : 'এই দিনে কোনো টাইমলাইন এন্ট্রি নেই।'}</p>`;
+        } else {
+          listEl.innerHTML = acts.map((act) => {
+            const catMeta = state.activityCategories.find((c) => c.name === act.category) || { icon: '📌', color: '#0F766E' };
+            const linkedTx = dayRec.transactions.filter((t) => t.linkedActivityId === act.id);
+            const linkedSum = linkedTx.reduce((s, t) => s + (Number(t.amount) || 0), 0);
+            const dur = diffMinutes(act.startTime, act.endTime);
+
+            return `
+              <div class="relative pl-5 border-l-2 pb-2.5 last:pb-0" style="border-color: ${escapeHTML(catMeta.color)}55;">
+                <span class="absolute -left-[6px] top-1.5 w-2.5 h-2.5 rounded-full" style="background: ${escapeHTML(catMeta.color)};"></span>
+                <div class="p-3 rounded-2xl bg-[#F8FAFC] dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 space-y-1">
+                  <div class="flex items-start justify-between gap-2">
+                    <div>
+                      <span class="text-[11px] font-bold tabular-nums" style="color: ${escapeHTML(catMeta.color)};">
+                        ${escapeHTML(format12h(act.startTime, state.lang))}${act.endTime ? ` – ${escapeHTML(format12h(act.endTime, state.lang))}` : ''}${dur !== null ? ` (${formatDur(dur, state.lang)})` : ''}
+                      </span>
+                      <h4 class="text-sm font-bold text-slate-900 dark:text-white">${escapeHTML(act.title)}</h4>
+                    </div>
+                    <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 shrink-0">
+                      ${escapeHTML(catMeta.icon)} ${escapeHTML(act.category)}
+                    </span>
+                  </div>
+                  ${act.notes ? `<p class="text-xs text-slate-600 dark:text-slate-300">${escapeHTML(act.notes)}</p>` : ''}
+                  ${linkedTx.length > 0 ? `<p class="text-xs font-bold text-rose-600 dark:text-rose-400 tabular-nums">খরচ: ${formatBDT(linkedSum)} (${linkedTx.map((x) => escapeHTML(x.title)).join(', ')})</p>` : ''}
+                  <div class="flex items-center gap-3 pt-1 text-xs font-bold">
+                    <button type="button" onclick="window.__openTxForAct('${act.id}')" class="text-[#136F78] dark:text-teal-400 hover:underline">+ খরচ</button>
+                    <button type="button" onclick="window.__openEditAct('${act.id}')" class="text-slate-600 dark:text-slate-300 hover:underline">এডিট</button>
+                    <button type="button" onclick="window.__delAct('${act.id}')" class="text-rose-600 hover:underline">মুছুন</button>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+
+        document.getElementById('wrapWakeTimeInput').value = dayRec.wakeTime || '';
+        document.getElementById('wrapSleepTimeInput').value = dayRec.sleepTime || '';
+        document.getElementById('wrapMoodSelect').value = String(dayRec.mood || 4);
+        document.getElementById('wrapEnergySelect').value = String(dayRec.energy || 4);
+        document.getElementById('wrapReflectionInput').value = dayRec.reflection || '';
+      }
+
+      function renderHisab() {
+        const subMap = {
+          ledger: { btn: 'subTabLedger', panel: 'hisabPanel-ledger' },
+          bought: { btn: 'subTabBought', panel: 'hisabPanel-bought' },
+          loans: { btn: 'subTabLoans', panel: 'hisabPanel-loans' },
+        };
+
+        Object.entries(subMap).forEach(([k, cfg]) => {
+          const b = document.getElementById(cfg.btn);
+          const p = document.getElementById(cfg.panel);
+          const active = activeHisabSub === k;
+          if (b) {
+            b.className = active
+              ? 'py-1.5 px-2 rounded-lg text-xs font-bold bg-white dark:bg-slate-900 text-[#075E4B] dark:text-teal-300 shadow-2xs transition'
+              : 'py-1.5 px-2 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 transition';
+          }
+          if (p) p.classList.toggle('hidden', !active);
+        });
+
+        const dayRec = ensureDay(selectedDate);
+        const fin = computeDayFinance(dayRec);
+
+        document.getElementById('ledgerIncomeTotal').textContent = formatBDT(fin.income);
+        document.getElementById('ledgerExpenseTotal').textContent = formatBDT(fin.expense);
+        document.getElementById('ledgerCashDigitalText').textContent = `নগদ: ${formatBDT(fin.cashSpend)} • ডিজিটাল: ${formatBDT(fin.digitalSpend)}`;
+        document.getElementById('ledgerNetBalanceText').textContent = `নেট: ${formatBDT(fin.income - fin.expense)}`;
+        document.getElementById('ledgerTxCount').textContent = `${dayRec.transactions.length} টি`;
+
+        // Category bars
+        const catSums = {};
+        dayRec.transactions.filter((t) => t.kind !== 'income').forEach((t) => {
+          catSums[t.category] = (catSums[t.category] || 0) + (Number(t.amount) || 0);
+        });
+        const sortedCats = Object.entries(catSums).sort((a, b) => b[1] - a[1]);
+        const barsEl = document.getElementById('ledgerCategoryBars');
+        if (sortedCats.length === 0) {
+          barsEl.innerHTML = `<p class="text-xs text-slate-400">খাত অনুযায়ী খরচের হিসাব নেই।</p>`;
+        } else {
+          const maxC = Math.max(...sortedCats.map((x) => x[1]), 1);
+          barsEl.innerHTML = sortedCats.map(([cat, amt]) => `
+            <div class="space-y-1">
+              <div class="flex justify-between text-xs font-semibold tabular-nums">
+                <span>${escapeHTML(cat)}</span>
+                <span>${formatBDT(amt)}</span>
+              </div>
+              <div class="w-full h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                <div class="h-full rounded-full bg-[#136F78]" style="width: ${Math.round((amt / maxC) * 100)}%"></div>
+              </div>
+            </div>
+          `).join('');
+        }
+
+        // Transactions list
+        const txListEl = document.getElementById('ledgerTransactionsList');
+        if (dayRec.transactions.length === 0) {
+          txListEl.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">এই দিনে কোনো লেনদেন নেই।</p>`;
+        } else {
+          txListEl.innerHTML = dayRec.transactions.map((tx) => {
+            const isInc = tx.kind === 'income';
+            return `
+              <div class="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-[#F8FAFC] dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60">
+                <div class="min-w-0">
+                  <p class="text-xs sm:text-sm font-bold truncate ${isInc ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-900 dark:text-white'}">${escapeHTML(tx.title)}</p>
+                  <p class="text-[11px] text-slate-500">${escapeHTML(tx.category)} • ${escapeHTML(tx.paymentMode)} • ${escapeHTML(tx.tag || '')}</p>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                  <span class="text-xs sm:text-sm font-bold tabular-nums ${isInc ? 'text-emerald-700' : 'text-rose-700 dark:text-rose-400'}">
+                    ${isInc ? '+' : '-'}${formatBDT(tx.amount)}
+                  </span>
+                  <button type="button" onclick="window.__delTx('${tx.id}')" class="text-xs font-bold text-rose-600">✕</button>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+
+        // Bought Items tab
+        document.getElementById('boughtItemsTotalBadge').textContent = formatBDT(fin.boughtTotal);
+        const boughtEl = document.getElementById('boughtItemsList');
+        if (fin.boughtItems.length === 0) {
+          boughtEl.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">আজ কেনা কোনো আইটেম মার্ক করা হয়নি।</p>`;
+        } else {
+          boughtEl.innerHTML = fin.boughtItems.map((it) => `
+            <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 space-y-2">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm font-bold text-slate-900 dark:text-white">${escapeHTML(it.title)}</p>
+                  <p class="text-[11px] text-slate-500">${escapeHTML(it.paymentMode)} • ${escapeHTML(it.tag || '')}</p>
+                </div>
+                <span class="text-sm font-bold text-[#075E4B] dark:text-teal-400 tabular-nums">${formatBDT(it.amount)}</span>
+              </div>
+              <div class="flex items-center justify-between text-[11px]">
+                <span class="text-slate-500 font-semibold">Worth It?</span>
+                <div class="flex gap-1">
+                  <button type="button" onclick="window.__setWorth('${it.id}','worth')" class="px-2 py-0.5 rounded-lg font-bold ${it.worthIt === 'worth' ? 'bg-emerald-600 text-white' : 'bg-white dark:bg-slate-900 text-slate-600'}">হ্যাঁ</button>
+                  <button type="button" onclick="window.__setWorth('${it.id}','later')" class="px-2 py-0.5 rounded-lg font-bold ${it.worthIt === 'later' ? 'bg-amber-500 text-white' : 'bg-white dark:bg-slate-900 text-slate-600'}">পরে দেখব</button>
+                  <button type="button" onclick="window.__setWorth('${it.id}','no')" class="px-2 py-0.5 rounded-lg font-bold ${it.worthIt === 'no' ? 'bg-rose-600 text-white' : 'bg-white dark:bg-slate-900 text-slate-600'}">না</button>
+                </div>
+              </div>
+            </div>
+          `).join('');
+        }
+
+        // Loans / ধার-দেনা tab
+        let getSum = 0;
+        let giveSum = 0;
+        (state.loans || []).forEach((l) => {
+          const rem = Math.max(0, (Number(l.totalAmount) || 0) - (Number(l.settledAmount) || 0));
+          if (l.direction === 'get') getSum += rem;
+          else giveSum += rem;
+        });
+        document.getElementById('loansGetTotal').textContent = formatBDT(getSum);
+        document.getElementById('loansGiveTotal').textContent = formatBDT(giveSum);
+
+        document.getElementById('loansPeopleList').innerHTML = (state.loans || []).length === 0
+          ? `<p class="text-xs text-slate-400 text-center py-3">কোনো ধার-দেনার এন্ট্রি নেই।</p>`
+          : state.loans.map((l) => {
+            const rem = Math.max(0, (Number(l.totalAmount) || 0) - (Number(l.settledAmount) || 0));
+            const isGet = l.direction === 'get';
+            return `
+              <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 flex items-center justify-between gap-2">
+                <div>
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${isGet ? 'bg-teal-100 text-teal-900' : 'bg-amber-100 text-amber-900'}">
+                    ${isGet ? 'আমি পাব' : 'আমি দেব'}
+                  </span>
+                  <p class="text-sm font-bold text-slate-900 dark:text-white mt-0.5">${escapeHTML(l.person)}</p>
+                  <p class="text-[11px] text-slate-500">${escapeHTML(l.note || '')} ${l.dueDate ? `• ${escapeHTML(l.dueDate)}` : ''}</p>
+                </div>
+                <div class="text-right shrink-0 space-y-1">
+                  <p class="text-sm font-bold tabular-nums ${isGet ? 'text-[#0F766E]' : 'text-amber-700'}">${formatBDT(rem)}</p>
+                  <div class="flex items-center justify-end gap-1.5 text-[11px]">
+                    ${rem > 0 ? `<button type="button" onclick="window.__payLoan('${l.id}')" class="px-2 py-0.5 rounded-lg bg-[#136F78] text-white font-bold">+ শোধ</button>` : ''}
+                    <button type="button" onclick="window.__delLoan('${l.id}')" class="text-rose-600 font-bold">✕</button>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('');
+      }
+
+      function renderVault() {
+        const isDocs = activeVaultSub === 'docs';
+        document.getElementById('vaultTabDocs').className = isDocs
+          ? 'py-1.5 px-2 rounded-lg text-xs font-bold bg-white dark:bg-slate-900 text-[#075E4B] dark:text-teal-300 shadow-2xs'
+          : 'py-1.5 px-2 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300';
+        document.getElementById('vaultTabSecrets').className = !isDocs
+          ? 'py-1.5 px-2 rounded-lg text-xs font-bold bg-white dark:bg-slate-900 text-[#075E4B] dark:text-teal-300 shadow-2xs'
+          : 'py-1.5 px-2 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300';
+
+        document.getElementById('vaultPanel-docs').classList.toggle('hidden', !isDocs);
+        document.getElementById('vaultPanel-secrets').classList.toggle('hidden', isDocs);
+
+        // Folders Grid
+        document.getElementById('vaultFoldersGrid').innerHTML = (state.docFolders || []).map((f) => {
+          const count = (state.docRecords || []).filter((r) => r.folderId === f.id).length;
+          const active = selectedFolderId === f.id;
+          return `
+            <button
+              type="button"
+              onclick="window.__pickFolder('${f.id}')"
+              class="p-2.5 rounded-2xl border text-center transition ${
+                active
+                  ? 'bg-teal-50 dark:bg-teal-950/50 border-[#075E4B] text-[#075E4B] dark:text-teal-300'
+                  : 'bg-[#F8FAFC] dark:bg-slate-800/60 border-slate-200/70 dark:border-slate-700/60 text-slate-800 dark:text-slate-100'
+              }"
+            >
+              <div class="text-base">${escapeHTML(f.icon || '📁')}</div>
+              <p class="text-[11px] font-bold leading-tight mt-1 line-clamp-2">${escapeHTML(f.name)}</p>
+              <p class="text-[10px] text-slate-500 mt-0.5 tabular-nums">${count}টা</p>
+            </button>
+          `;
+        }).join('');
+
+        const activeFolder = (state.docFolders || []).find((f) => f.id === selectedFolderId);
+        document.getElementById('vaultActiveFolderHeading').textContent = activeFolder
+          ? `${activeFolder.icon} ${activeFolder.name}`
+          : 'সব ডকুমেন্ট';
+
+        const recs = (state.docRecords || []).filter((r) => selectedFolderId === 'all' || r.folderId === selectedFolderId);
+        document.getElementById('vaultDocItemsList').innerHTML = recs.length === 0
+          ? `<p class="text-xs text-slate-400 text-center py-3">এই ফোল্ডারে কোনো ডকুমেন্ট নোট নেই।</p>`
+          : recs.map((r) => `
+            <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60 flex items-start justify-between gap-2">
+              <div>
+                <p class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">${escapeHTML(r.title)}</p>
+                ${r.expiryDate ? `<p class="text-[11px] font-semibold text-amber-700 dark:text-amber-400 tabular-nums">মেয়াদ: ${escapeHTML(r.expiryDate)}</p>` : ''}
+                ${r.note ? `<p class="text-xs text-slate-600 dark:text-slate-300 mt-0.5">${escapeHTML(r.note)}</p>` : ''}
+              </div>
+              <button type="button" onclick="window.__delDoc('${r.id}')" class="text-xs font-bold text-rose-600">✕</button>
+            </div>
+          `).join('');
+
+        // Secrets lock/unlock
+        document.getElementById('vaultPinGate').classList.toggle('hidden', state.vaultUnlocked);
+        document.getElementById('vaultSecretsUnlockedArea').classList.toggle('hidden', !state.vaultUnlocked);
+
+        if (state.vaultUnlocked) {
+          document.getElementById('vaultSecretsList').innerHTML = (state.secrets || []).length === 0
+            ? `<p class="text-xs text-slate-400 text-center py-3">কোনো গোপন নোট নেই।</p>`
+            : state.secrets.map((s) => `
+              <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/70 dark:border-slate-700 flex items-start justify-between gap-2">
+                <div>
+                  <p class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">${escapeHTML(s.title)}</p>
+                  <p class="text-[11px] font-semibold text-[#136F78] dark:text-teal-400">${escapeHTML(s.account || '')}</p>
+                  <p class="text-xs text-slate-600 dark:text-slate-300 mt-0.5">${escapeHTML(s.note)}</p>
+                </div>
+                <button type="button" onclick="window.__delSecret('${s.id}')" class="text-xs font-bold text-rose-600">✕</button>
+              </div>
+            `).join('');
+        }
+      }
+
+      function renderMore() {
+        const dayRec = ensureDay(selectedDate);
+
+        document.getElementById('moreHabitsList').innerHTML = (state.habits || []).map((h) => {
+          const checked = Boolean(dayRec.completedHabits[h.id]);
+          const streak = computeHabitStreak(h.id, selectedDate);
+          return `
+            <div class="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-700/60">
+              <label class="flex items-center gap-2 cursor-pointer text-xs font-bold flex-1">
+                <input type="checkbox" ${checked ? 'checked' : ''} onchange="window.__toggleHabit('${h.id}')" class="w-4 h-4 rounded" />
+                <span class="${checked ? 'line-through text-slate-400' : ''}">${escapeHTML(h.title)}</span>
+              </label>
+              <div class="flex items-center gap-1.5 shrink-0">
+                <span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 tabular-nums">🔥 ${streak}d</span>
+                <button type="button" onclick="window.__delHabit('${h.id}')" class="text-xs font-bold text-rose-600">✕</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        document.getElementById('cfgTargetInput').value = state.dailyTarget || 1000;
+        document.getElementById('cfgNameInput').value = state.userName || '';
+        document.getElementById('cfgCityInput').value = state.city || '';
+        document.getElementById('cfgNextChipInput').value = state.nextChip || '';
+
+        document.getElementById('cfgActCatChips').innerHTML = (state.activityCategories || []).map((c) => `
+          <span class="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-xl bg-teal-50 dark:bg-teal-950/60 text-[#075E4B] dark:text-teal-300">
+            <span class="w-2 h-2 rounded-full" style="background:${escapeHTML(c.color || '#0F766E')}"></span>
+            ${escapeHTML(c.icon)} ${escapeHTML(c.name)}
+            <button type="button" onclick="window.__delActCat('${c.id}')" class="text-rose-600 ml-0.5">×</button>
+          </span>
+        `).join('');
+
+        document.getElementById('cfgExpCatChips').innerHTML = (state.expenseCategories || []).map((c, idx) => `
+          <span class="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200">
+            ${escapeHTML(c)}
+            <button type="button" onclick="window.__delExpCat(${idx})" class="text-rose-600 ml-0.5">×</button>
+          </span>
+        `).join('');
+
+        document.getElementById('cfgQuickBtnsList').innerHTML = (state.quickButtons || []).map((qb) => `
+          <div class="flex items-center justify-between text-xs p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60">
+            <span class="font-bold">${escapeHTML(qb.icon)} ${escapeHTML(qb.label)} ${Number(qb.amount) > 0 ? `• ${formatBDT(qb.amount)}` : ''}</span>
+            <button type="button" onclick="window.__delQuickBtn('${qb.id}')" class="text-rose-600 font-bold">মুছুন</button>
+          </div>
+        `).join('');
+      }
+
+      function renderAll() {
+        document.getElementById('sampleBadge').classList.toggle('hidden', !state.isSampleData);
+        document.getElementById('globalDatePicker').value = selectedDate;
+        document.getElementById('headerDateSub').textContent = formatGregorianDate(selectedDate, state.lang);
+        applyLanguageLabels();
+        syncDropdowns();
+        renderHome();
+        renderDiary();
+        renderHisab();
+        renderVault();
+        renderMore();
+      }
+
+      function switchTab(tab) {
+        activeTab = tab;
+        ['home', 'diary', 'hisab', 'vault', 'more'].forEach((t) => {
+          document.getElementById(`view-${t}`)?.classList.toggle('hidden', t !== tab);
+        });
+        document.querySelectorAll('.bottom-nav-btn').forEach((btn) => {
+          const isAct = btn.getAttribute('data-nav') === tab;
+          btn.className = isAct
+            ? 'bottom-nav-btn flex flex-col items-center justify-center py-1 rounded-xl text-[#136F78] dark:text-teal-400 font-bold transition'
+            : 'bottom-nav-btn flex flex-col items-center justify-center py-1 rounded-xl text-slate-500 dark:text-slate-400 font-medium transition';
+        });
+      }
+
+      // Modals
+      function openActivityModal(editId = null) {
+        const dayRec = ensureDay(selectedDate);
+        document.getElementById('activityForm').reset();
+        document.getElementById('actAttachExpenseBox').classList.add('hidden');
+        document.getElementById('actAttachExpenseCheck').checked = false;
+
+        if (editId) {
+          const f = dayRec.activities.find((a) => a.id === editId);
+          if (f) {
+            document.getElementById('activityModalTitle').textContent = 'কাজ এডিট করুন';
+            document.getElementById('actEditId').value = f.id;
+            document.getElementById('actTitleInput').value = f.title;
+            document.getElementById('actStartInput').value = f.startTime || '';
+            document.getElementById('actEndInput').value = f.endTime || '';
+            document.getElementById('actCategorySelect').value = f.category || state.activityCategories[0].name;
+            document.getElementById('actShowHomeSelect').value = f.showOnHome === false ? 'no' : 'yes';
+            document.getElementById('actNotesInput').value = f.notes || '';
+            const m = document.getElementById('activityModal');
+            m.classList.remove('hidden');
+            m.classList.add('flex');
+            return;
+          }
+        }
+
+        document.getElementById('activityModalTitle').textContent = 'কাজ ও সময় যোগ করুন';
+        document.getElementById('actEditId').value = '';
+        document.getElementById('actStartInput').value = nowHHMM();
+        const m = document.getElementById('activityModal');
+        m.classList.remove('hidden');
+        m.classList.add('flex');
+      }
+
+      function closeActivityModal() {
+        const m = document.getElementById('activityModal');
+        m.classList.add('hidden');
+        m.classList.remove('flex');
+      }
+
+      function openTxModal(editId = null, preLinkedActId = '') {
+        syncDropdowns();
+        document.getElementById('txForm').reset();
+        setTxKind('expense');
+        document.getElementById('txEditId').value = editId || '';
+        document.getElementById('txLinkedActSelect').value = preLinkedActId || '';
+        const m = document.getElementById('txModal');
+        m.classList.remove('hidden');
+        m.classList.add('flex');
+      }
+
+      function closeTxModal() {
+        const m = document.getElementById('txModal');
+        m.classList.add('hidden');
+        m.classList.remove('flex');
+      }
+
+      function setTxKind(kind) {
+        document.getElementById('txKindInput').value = kind;
+        const expBtn = document.getElementById('txKindExpenseBtn');
+        const incBtn = document.getElementById('txKindIncomeBtn');
+        if (kind === 'income') {
+          incBtn.className = 'py-2 rounded-xl text-xs font-bold bg-emerald-600 text-white';
+          expBtn.className = 'py-2 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200';
+        } else {
+          expBtn.className = 'py-2 rounded-xl text-xs font-bold bg-rose-600 text-white';
+          incBtn.className = 'py-2 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200';
+        }
+      }
+
+      function openDynamicModal(title, fields, onSubmit) {
+        document.getElementById('dynamicModalTitle').textContent = title;
+        const body = document.getElementById('dynamicModalBody');
+        const formId = 'dynInnerForm';
+        body.innerHTML = `
+          <form id="${formId}" class="space-y-3">
+            ${fields.map((f) => {
+              if (f.type === 'select') {
+                return `
+                  <div>
+                    <label class="block text-xs font-semibold mb-1">${escapeHTML(f.label)}</label>
+                    <select name="${escapeHTML(f.name)}" class="w-full text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2">
+                      ${(f.options || []).map((o) => `<option value="${escapeHTML(o.value)}">${escapeHTML(o.label)}</option>`).join('')}
+                    </select>
+                  </div>
+                `;
+              }
+              return `
+                <div>
+                  <label class="block text-xs font-semibold mb-1">${escapeHTML(f.label)}</label>
+                  <input name="${escapeHTML(f.name)}" type="${escapeHTML(f.type || 'text')}" ${f.step ? `step="${escapeHTML(f.step)}"` : ''} ${f.required ? 'required' : ''} placeholder="${escapeHTML(f.placeholder || '')}" class="w-full text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2" />
+                </div>
+              `;
+            }).join('')}
+            <div class="flex justify-end gap-2 pt-1">
+              <button type="button" id="dynCancelBtn" class="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800">বাতিল</button>
+              <button type="submit" class="px-4 py-2 rounded-xl text-xs font-bold bg-[#075E4B] text-white">সেভ করুন</button>
+            </div>
+          </form>
+        `;
+
+        const m = document.getElementById('dynamicModal');
+        m.classList.remove('hidden');
+        m.classList.add('flex');
+
+        document.getElementById('dynCancelBtn').addEventListener('click', closeDynamicModal);
+        document.getElementById(formId).addEventListener('submit', (ev) => {
+          ev.preventDefault();
+          const fd = new FormData(ev.target);
+          const out = {};
+          fields.forEach((f) => { out[f.name] = fd.get(f.name); });
+          closeDynamicModal();
+          onSubmit(out);
+        });
+      }
+
+      function closeDynamicModal() {
+        const m = document.getElementById('dynamicModal');
+        m.classList.add('hidden');
+        m.classList.remove('flex');
+      }
+
+      function buildRecapText(dk) {
+        const d = ensureDay(dk);
+        const fin = computeDayFinance(d);
+        const dur = diffMinutes(d.wakeTime, d.sleepTime);
+        const doneH = state.habits.filter((h) => Boolean(d.completedHabits[h.id])).map((h) => h.title);
+        return [
+          `দিনহিসাব র‍্যাপ — ${formatGregorianDate(dk, 'bn')}`,
+          `ওঠা: ${d.wakeTime ? format12h(d.wakeTime, 'bn') : '--:--'} | ঘুম: ${d.sleepTime ? format12h(d.sleepTime, 'bn') : '--:--'}${dur !== null ? ` (${formatDur(dur, 'bn')})` : ''}`,
+          `কাজ: ${d.activities.length} টি | খরচ: ${formatBDT(fin.expense)} | কেনা জিনিস: ${fin.boughtItems.length} টি`,
+          `অভ্যাস: ${doneH.length}/${state.habits.length}`,
+          d.reflection ? `নোট: ${d.reflection}` : '',
+        ].filter(Boolean).join('\n');
+      }
+
+      function openDaySummaryPopup() {
+        const d = ensureDay(selectedDate);
+        const fin = computeDayFinance(d);
+        const dur = diffMinutes(d.wakeTime, d.sleepTime);
+        const doneH = state.habits.filter((h) => Boolean(d.completedHabits[h.id]));
+
+        document.getElementById('dynamicModalTitle').textContent = '🌙 দিনের র‍্যাপ ও সামারি';
+        document.getElementById('dynamicModalBody').innerHTML = `
+          <div class="space-y-3">
+            <div class="grid grid-cols-2 gap-2">
+              <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200/70 dark:border-slate-700">
+                <span class="text-[11px] text-slate-500">জাগ্রত সময়</span>
+                <p class="font-bold text-sm tabular-nums">${dur !== null ? formatDur(dur, 'bn') : '--'}</p>
+              </div>
+              <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200/70 dark:border-slate-700">
+                <span class="text-[11px] text-slate-500">মোট খরচ</span>
+                <p class="font-bold text-sm text-rose-700 tabular-nums">${formatBDT(fin.expense)}</p>
+              </div>
+            </div>
+            <p class="text-xs text-slate-600 dark:text-slate-300">
+              <strong>কেনা জিনিস (${fin.boughtItems.length}):</strong> ${fin.boughtItems.length ? fin.boughtItems.map((i) => `${escapeHTML(i.title)} (${formatBDT(i.amount)})`).join(', ') : 'নেই'}
+            </p>
+            <p class="text-xs text-slate-600 dark:text-slate-300">
+              <strong>অভ্যাস সম্পন্ন:</strong> ${doneH.length}/${state.habits.length} • মুড ${d.mood}/5 • এনার্জি ${d.energy}/5
+            </p>
+            ${d.reflection ? `<p class="p-2.5 rounded-xl bg-teal-50 dark:bg-teal-950/40 text-xs">${escapeHTML(d.reflection)}</p>` : ''}
+            <div class="flex justify-end gap-2 pt-1 no-print">
+              <button type="button" id="modalCopyRecapBtn" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-[#136F78] text-white">কপি</button>
+              <button type="button" onclick="window.print()" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-200 dark:bg-slate-700">প্রিন্ট</button>
+            </div>
+          </div>
+        `;
+        const m = document.getElementById('dynamicModal');
+        m.classList.remove('hidden');
+        m.classList.add('flex');
+        document.getElementById('modalCopyRecapBtn').addEventListener('click', () => {
+          const ta = document.createElement('textarea');
+          ta.value = buildRecapText(selectedDate);
+          document.body.appendChild(ta);
+          ta.select();
+          try { document.execCommand('copy'); showToast('সামারি কপি হয়েছে!', 'success'); } catch (_e) {}
+          document.body.removeChild(ta);
+        });
+      }
+
+      // Global action handlers
+      window.__toggleActDone = (id) => {
+        const d = ensureDay(selectedDate);
+        const a = d.activities.find((x) => x.id === id);
+        if (!a) return;
+        a.completed = !a.completed;
+        state.isSampleData = false;
+        saveAppState();
+        renderHome();
+      };
+
+      window.__snoozeAct = (id) => {
+        const d = ensureDay(selectedDate);
+        const a = d.activities.find((x) => x.id === id);
+        if (!a || !a.startTime || !a.startTime.includes(':')) return;
+        const [h, m] = a.startTime.split(':').map(Number);
+        const total = (h * 60 + m + 15) % (24 * 60);
+        a.startTime = `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+        saveAppState();
+        renderAll();
+        showToast('১৫ মিনিট পিছিয়ে দেওয়া হয়েছে।', 'info');
+      };
+
+      window.__openEditAct = (id) => openActivityModal(id);
+      window.__openTxForAct = (actId) => openTxModal(null, actId);
+
+      window.__delAct = (id) => {
+        const d = ensureDay(selectedDate);
+        d.activities = d.activities.filter((x) => x.id !== id);
+        saveAppState();
+        renderAll();
+        showToast('কাজ মুছে ফেলা হয়েছে।', 'info');
+      };
+
+      window.__runQuickBtn = (qbId) => {
+        const qb = (state.quickButtons || []).find((x) => x.id === qbId);
+        if (!qb) return;
+        const d = ensureDay(selectedDate);
+        const actId = uid('act');
+        d.activities.push({
+          id: actId,
+          startTime: nowHHMM(),
+          endTime: '',
+          title: qb.label,
+          category: qb.actCat || state.activityCategories[0].name,
+          showOnHome: true,
+          completed: true,
+          notes: 'কুইক বাটন',
+        });
+        if (Number(qb.amount) > 0) {
+          d.transactions.push({
+            id: uid('tx'),
+            kind: 'expense',
+            amount: Number(qb.amount),
+            title: qb.label,
+            category: qb.expCat || state.expenseCategories[0],
+            paymentMode: state.paymentModes[0] || 'নগদ',
+            tag: state.purchaseTags[0] || 'প্রয়োজন (Need)',
+            isBoughtItem: Boolean(qb.isBought),
+            worthIt: 'worth',
+            linkedActivityId: actId,
+          });
+        }
+        state.isSampleData = false;
+        saveAppState();
+        renderAll();
+        showToast(`${qb.icon || '⚡'} ${qb.label} লগ হয়েছে!`, 'success');
+      };
+
+      window.__delTx = (id) => {
+        const d = ensureDay(selectedDate);
+        d.transactions = d.transactions.filter((x) => x.id !== id);
+        saveAppState();
+        renderAll();
+        showToast('লেনদেন মুছে ফেলা হয়েছে।', 'info');
+      };
+
+      window.__setWorth = (txId, val) => {
+        const d = ensureDay(selectedDate);
+        const tx = d.transactions.find((x) => x.id === txId);
+        if (!tx) return;
+        tx.worthIt = val;
+        saveAppState();
+        renderHisab();
+        renderHome();
+      };
+
+      window.__payLoan = (id) => {
+        const l = (state.loans || []).find((x) => x.id === id);
+        if (!l) return;
+        const rem = Math.max(0, (Number(l.totalAmount) || 0) - (Number(l.settledAmount) || 0));
+        openDynamicModal(`${l.person} — পরিশোধ / কিস্তি`, [
+          { name: 'amt', label: `টাকার পরিমাণ (বাকি ${formatBDT(rem)})`, type: 'number', step: 'any', required: true, placeholder: String(rem) },
+        ], (out) => {
+          l.settledAmount = Math.min(Number(l.totalAmount) || 0, (Number(l.settledAmount) || 0) + Math.max(0, Number(out.amt) || 0));
+          saveAppState();
+          renderHisab();
+          showToast('হিসাব আপডেট হয়েছে!', 'success');
+        });
+      };
+
+      window.__delLoan = (id) => {
+        state.loans = (state.loans || []).filter((x) => x.id !== id);
+        saveAppState();
+        renderHisab();
+      };
+
+      window.__pickFolder = (fid) => {
+        selectedFolderId = fid;
+        renderVault();
+      };
+
+      window.__delDoc = (id) => {
+        state.docRecords = (state.docRecords || []).filter((x) => x.id !== id);
+        saveAppState();
+        renderVault();
+      };
+
+      window.__delSecret = (id) => {
+        state.secrets = (state.secrets || []).filter((x) => x.id !== id);
+        saveAppState();
+        renderVault();
+      };
+
+      window.__toggleHabit = (hbId) => {
+        const d = ensureDay(selectedDate);
+        d.completedHabits[hbId] = !d.completedHabits[hbId];
+        state.isSampleData = false;
+        saveAppState();
+        renderMore();
+        renderHome();
+      };
+
+      window.__delHabit = (hbId) => {
+        state.habits = (state.habits || []).filter((x) => x.id !== hbId);
+        saveAppState();
+        renderMore();
+        renderHome();
+      };
+
+      window.__delActCat = (id) => {
+        if (state.activityCategories.length <= 1) return showToast('অন্তত ১টি ক্যাটাগরি থাকতে হবে।', 'error');
+        state.activityCategories = state.activityCategories.filter((x) => x.id !== id);
+        saveAppState();
+        renderAll();
+      };
+
+      window.__delExpCat = (idx) => {
+        if (state.expenseCategories.length <= 1) return showToast('অন্তত ১টি খাত থাকতে হবে।', 'error');
+        state.expenseCategories.splice(idx, 1);
+        saveAppState();
+        renderAll();
+      };
+
+      window.__delQuickBtn = (id) => {
+        state.quickButtons = (state.quickButtons || []).filter((x) => x.id !== id);
+        saveAppState();
+        renderAll();
+      };
+
+      function bindAllEvents() {
+        document.querySelectorAll('.bottom-nav-btn').forEach((b) => {
+          b.addEventListener('click', () => switchTab(b.getAttribute('data-nav')));
+        });
+
+        document.getElementById('globalDatePicker').addEventListener('change', (e) => {
+          if (e.target.value) {
+            selectedDate = e.target.value;
+            renderAll();
+          }
+        });
+
+        document.getElementById('langToggleBtn').addEventListener('click', () => {
+          state.lang = state.lang === 'bn' ? 'en' : 'bn';
+          saveAppState();
+          renderAll();
+        });
+
+        document.getElementById('themeToggleBtn').addEventListener('click', () => {
+          state.theme = state.theme === 'dark' ? 'light' : 'dark';
+          applyTheme();
+          saveAppState();
+        });
+
+        // Home quick milestones & actions
+        document.getElementById('quickWakeNowBtn').addEventListener('click', () => {
+          const d = ensureDay(selectedDate);
+          const t = nowHHMM();
+          d.wakeTime = t;
+          d.activities.push({ id: uid('act'), startTime: t, endTime: '', title: 'ঘুম থেকে ওঠা', category: state.activityCategories[0].name, showOnHome: false, completed: true, notes: '' });
+          state.isSampleData = false;
+          saveAppState();
+          renderAll();
+          showToast(`ঘুম থেকে ওঠার সময়: ${format12h(t, state.lang)}`, 'success');
+        });
+
+        document.getElementById('quickSleepNowBtn').addEventListener('click', () => {
+          const d = ensureDay(selectedDate);
+          const t = nowHHMM();
+          d.sleepTime = t;
+          d.activities.push({ id: uid('act'), startTime: t, endTime: '', title: 'ঘুমানো', category: state.activityCategories[0].name, showOnHome: false, completed: true, notes: '' });
+          state.isSampleData = false;
+          saveAppState();
+          renderAll();
+          openDaySummaryPopup();
+        });
+
+        document.getElementById('quickAddActHomeBtn').addEventListener('click', () => openActivityModal(null));
+        document.getElementById('homePlusAddTaskBtn').addEventListener('click', () => openActivityModal(null));
+        document.getElementById('diaryAddActivityBtn').addEventListener('click', () => openActivityModal(null));
+        document.getElementById('quickAddBuyHomeBtn').addEventListener('click', () => openTxModal(null, ''));
+        document.getElementById('hisabOpenTxBtn').addEventListener('click', () => openTxModal(null, ''));
+
+        document.getElementById('homeFullTimelineBtn').addEventListener('click', () => switchTab('diary'));
+        document.getElementById('homeJumpFinanceBtn').addEventListener('click', () => switchTab('hisab'));
+        document.getElementById('homeProfileBadgeBtn').addEventListener('click', () => switchTab('more'));
+        document.getElementById('homeBellSummaryBtn').addEventListener('click', openDaySummaryPopup);
+        document.getElementById('homeOpenDaySummaryBtn').addEventListener('click', openDaySummaryPopup);
+        document.getElementById('diaryOpenWrapBtn').addEventListener('click', openDaySummaryPopup);
+
+        // Quick entry bar on Home
+        document.getElementById('homeQuickEntryForm').addEventListener('submit', (e) => {
+          e.preventDefault();
+          const inp = document.getElementById('homeQuickEntryInput');
+          const raw = inp.value.trim();
+          if (!raw) return;
+          const d = ensureDay(selectedDate);
+          const bnMap = '০১২৩৪৫৬৭৮৯';
+          const norm = raw.replace(/[০-৯]/g, (c) => String(bnMap.indexOf(c)));
+          const match = norm.match(/(\d+(?:\.\d+)?)/);
+
+          if (match) {
+            const amt = Number(match[1]);
+            const isInc = /আয়|বেতন|পেলাম|income|salary/i.test(raw);
+            const isBought = /কিনলাম|বই|খাতা|জিনিস|bought|book/i.test(raw);
+            d.transactions.push({
+              id: uid('tx'),
+              kind: isInc ? 'income' : 'expense',
+              amount: amt,
+              title: raw,
+              category: isInc ? 'আয়' : (isBought ? 'কেনাকাটা / জিনিসপত্র' : state.expenseCategories[0]),
+              paymentMode: state.paymentModes[0] || 'নগদ',
+              tag: state.purchaseTags[0] || 'প্রয়োজন (Need)',
+              isBoughtItem: isBought,
+              worthIt: 'worth',
+              linkedActivityId: '',
+            });
+            showToast(`${isInc ? 'আয়' : 'খরচ'} ${formatBDT(amt)} যুক্ত হয়েছে!`, 'success');
+          } else {
+            d.activities.push({
+              id: uid('act'),
+              startTime: nowHHMM(),
+              endTime: '',
+              title: raw,
+              category: state.activityCategories[0].name,
+              showOnHome: true,
+              completed: false,
+              notes: '',
+            });
+            showToast(`কাজ "${raw}" যুক্ত হয়েছে!`, 'success');
+          }
+
+          inp.value = '';
+          state.isSampleData = false;
+          saveAppState();
+          renderAll();
+        });
+
+        // Activity Modal
+        document.getElementById('closeActivityModalBtn').addEventListener('click', closeActivityModal);
+        document.getElementById('cancelActivityModalBtn').addEventListener('click', closeActivityModal);
+        document.getElementById('actAttachExpenseCheck').addEventListener('change', (e) => {
+          document.getElementById('actAttachExpenseBox').classList.toggle('hidden', !e.target.checked);
+        });
+
+        document.getElementById('activityForm').addEventListener('submit', (e) => {
+          e.preventDefault();
+          const d = ensureDay(selectedDate);
+          const editId = document.getElementById('actEditId').value;
+          const title = document.getElementById('actTitleInput').value.trim();
+          const startTime = document.getElementById('actStartInput').value;
+          const endTime = document.getElementById('actEndInput').value;
+          const category = document.getElementById('actCategorySelect').value;
+          const showOnHome = document.getElementById('actShowHomeSelect').value !== 'no';
+          const notes = document.getElementById('actNotesInput').value.trim();
+          if (!title || !startTime) return;
+
+          let actId = editId;
+          if (editId) {
+            const found = d.activities.find((a) => a.id === editId);
+            if (found) Object.assign(found, { title, startTime, endTime, category, showOnHome, notes });
+          } else {
+            actId = uid('act');
+            d.activities.push({ id: actId, title, startTime, endTime, category, showOnHome, completed: false, notes });
+          }
+
+          if (document.getElementById('actAttachExpenseCheck').checked) {
+            const amt = Number(document.getElementById('actInlineAmt').value) || 0;
+            if (amt > 0) {
+              const expCat = document.getElementById('actInlineCat').value || state.expenseCategories[0];
+              d.transactions.push({
+                id: uid('tx'),
+                kind: 'expense',
+                amount: amt,
+                title: document.getElementById('actInlineItem').value.trim() || title,
+                category: expCat,
+                paymentMode: state.paymentModes[0] || 'নগদ',
+                tag: state.purchaseTags[0] || 'প্রয়োজন (Need)',
+                isBoughtItem: /কেনাকাটা|item|bought/i.test(expCat),
+                worthIt: 'worth',
+                linkedActivityId: actId,
+              });
+            }
+          }
+
+          state.isSampleData = false;
+          saveAppState();
+          closeActivityModal();
+          renderAll();
+          showToast('কাজ ও টাইমলাইন সেভ হয়েছে!', 'success');
+        });
+
+        // Tx Modal
+        document.getElementById('closeTxModalBtn').addEventListener('click', closeTxModal);
+        document.getElementById('cancelTxModalBtn').addEventListener('click', closeTxModal);
+        document.getElementById('txKindExpenseBtn').addEventListener('click', () => setTxKind('expense'));
+        document.getElementById('txKindIncomeBtn').addEventListener('click', () => setTxKind('income'));
+
+        document.getElementById('txForm').addEventListener('submit', (e) => {
+          e.preventDefault();
+          const d = ensureDay(selectedDate);
+          const kind = document.getElementById('txKindInput').value || 'expense';
+          const amount = Number(document.getElementById('txAmountInput').value) || 0;
+          const category = document.getElementById('txCategorySelect').value;
+          const title = document.getElementById('txTitleInput').value.trim();
+          const paymentMode = document.getElementById('txPaymentSelect').value;
+          const tag = document.getElementById('txTagSelect').value;
+          const linkedActivityId = document.getElementById('txLinkedActSelect').value;
+          const isBoughtItem = document.getElementById('txIsBoughtItemCheck').checked;
+          if (amount <= 0 || !title) return;
+
+          d.transactions.push({
+            id: uid('tx'),
+            kind,
+            amount,
+            title,
+            category,
+            paymentMode,
+            tag,
+            linkedActivityId,
+            isBoughtItem,
+            worthIt: 'worth',
+          });
+
+          state.isSampleData = false;
+          saveAppState();
+          closeTxModal();
+          renderAll();
+          showToast('হিসাব সেভ হয়েছে!', 'success');
+        });
+
+        document.getElementById('closeDynamicModalBtn').addEventListener('click', closeDynamicModal);
+        document.getElementById('diaryCategoryFilter').addEventListener('change', renderDiary);
+
+        // Wrap-up save & copy
+        document.getElementById('saveWrapUpBtn').addEventListener('click', () => {
+          const d = ensureDay(selectedDate);
+          d.wakeTime = document.getElementById('wrapWakeTimeInput').value;
+          d.sleepTime = document.getElementById('wrapSleepTimeInput').value;
+          d.mood = Number(document.getElementById('wrapMoodSelect').value) || 4;
+          d.energy = Number(document.getElementById('wrapEnergySelect').value) || 4;
+          d.reflection = document.getElementById('wrapReflectionInput').value.trim();
+          state.isSampleData = false;
+          saveAppState();
+          renderAll();
+          showToast('রাতের ঘুম ও রিফ্লেকশন সেভ হয়েছে!', 'success');
+        });
+
+        document.getElementById('copyRecapBtn').addEventListener('click', () => {
+          const ta = document.createElement('textarea');
+          ta.value = buildRecapText(selectedDate);
+          document.body.appendChild(ta);
+          ta.select();
+          try { document.execCommand('copy'); showToast('ডেইলি র‍্যাপ কপি হয়েছে!', 'success'); } catch (_e) {}
+          document.body.removeChild(ta);
+        });
+
+        // Hisab Sub-Tabs & Loan Modal
+        document.getElementById('subTabLedger').addEventListener('click', () => { activeHisabSub = 'ledger'; renderHisab(); });
+        document.getElementById('subTabBought').addEventListener('click', () => { activeHisabSub = 'bought'; renderHisab(); });
+        document.getElementById('subTabLoans').addEventListener('click', () => { activeHisabSub = 'loans'; renderHisab(); });
+
+        document.getElementById('hisabAddLoanBtn').addEventListener('click', () => {
+          openDynamicModal('নতুন ধার-দেনা', [
+            { name: 'person', label: 'ব্যক্তির নাম *', type: 'text', required: true, placeholder: 'যেমন: রবিন, করিম ভাই' },
+            { name: 'direction', label: 'ধরন', type: 'select', options: [{ value: 'get', label: 'আমি পাব' }, { value: 'give', label: 'আমি দেব' }] },
+            { name: 'totalAmount', label: 'মোট টাকা (৳) *', type: 'number', step: 'any', required: true, placeholder: '1000' },
+            { name: 'settledAmount', label: 'ইতোমধ্যে পরিশোধিত (৳)', type: 'number', step: 'any', placeholder: '0' },
+            { name: 'dueDate', label: 'ফেরতের তারিখ', type: 'date' },
+            { name: 'note', label: 'নোট', type: 'text', placeholder: 'ঐচ্ছিক নোট' },
+          ], (out) => {
+            state.loans.push({
+              id: uid('ln'),
+              person: out.person.trim(),
+              direction: out.direction,
+              totalAmount: Math.max(0, Number(out.totalAmount) || 0),
+              settledAmount: Math.max(0, Number(out.settledAmount) || 0),
+              dueDate: out.dueDate || '',
+              note: out.note.trim(),
+            });
+            saveAppState();
+            renderHisab();
+            showToast('ধার-দেনা যুক্ত হয়েছে!', 'success');
+          });
+        });
+
+        // Vault Sub-Tabs, Folders, Docs & Secrets
+        document.getElementById('vaultTabDocs').addEventListener('click', () => { activeVaultSub = 'docs'; renderVault(); });
+        document.getElementById('vaultTabSecrets').addEventListener('click', () => { activeVaultSub = 'secrets'; renderVault(); });
+        document.getElementById('vaultResetFolderFilterBtn').addEventListener('click', () => { selectedFolderId = 'all'; renderVault(); });
+
+        document.getElementById('vaultAddFolderBtn').addEventListener('click', () => {
+          openDynamicModal('নতুন ফোল্ডার তৈরি করুন', [
+            { name: 'icon', label: 'আইকন (Emoji)', type: 'text', placeholder: '📂' },
+            { name: 'name', label: 'ফোল্ডারের নাম *', type: 'text', required: true, placeholder: 'যেমন: বীমা, সঞ্চয়পত্র' },
+          ], (out) => {
+            state.docFolders.push({ id: uid('fld'), icon: (out.icon || '📂').trim(), name: out.name.trim() });
+            saveAppState();
+            renderVault();
+            showToast('ফোল্ডার যুক্ত হয়েছে!', 'success');
+          });
+        });
+
+        document.getElementById('vaultAddDocRecordBtn').addEventListener('click', () => {
+          openDynamicModal('নতুন ডকুমেন্ট নোট', [
+            { name: 'title', label: 'শিরোনাম *', type: 'text', required: true, placeholder: 'যেমন: পাসপোর্ট নবায়ন নোট' },
+            { name: 'folderId', label: 'ফোল্ডার', type: 'select', options: state.docFolders.map((f) => ({ value: f.id, label: `${f.icon} ${f.name}` })) },
+            { name: 'expiryDate', label: 'মেয়াদ শেষের তারিখ', type: 'date' },
+            { name: 'note', label: 'নোট / তথ্য', type: 'text', placeholder: 'রেফারেন্স নোট' },
+          ], (out) => {
+            state.docRecords.push({
+              id: uid('dr'),
+              folderId: out.folderId || state.docFolders[0].id,
+              title: out.title.trim(),
+              expiryDate: out.expiryDate || '',
+              note: out.note.trim(),
+            });
+            saveAppState();
+            renderVault();
+            showToast('ডকুমেন্ট নোট সেভ হয়েছে!', 'success');
+          });
+        });
+
+        document.getElementById('vaultUnlockSubmitBtn').addEventListener('click', () => {
+          const pin = document.getElementById('vaultPinEntry').value.trim();
+          if (pin === (state.vaultPin || '1234')) {
+            state.vaultUnlocked = true;
+            document.getElementById('vaultPinEntry').value = '';
+            renderVault();
+            showToast('ভল্ট আনলক হয়েছে', 'success');
+          } else {
+            showToast('ভুল PIN! (ডিফল্ট 1234)', 'error');
+          }
+        });
+
+        document.getElementById('vaultLockToggleBtn').addEventListener('click', () => {
+          state.vaultUnlocked = false;
+          renderVault();
+        });
+
+        document.getElementById('vaultSaveNewPinBtn').addEventListener('click', () => {
+          const np = document.getElementById('vaultNewPinInput').value.trim();
+          if (np.length < 4) return showToast('অন্তত ৪ ডিজিটের PIN দিন', 'error');
+          state.vaultPin = np;
+          document.getElementById('vaultNewPinInput').value = '';
+          saveAppState();
+          showToast('নতুন PIN সেভ হয়েছে!', 'success');
+        });
+
+        document.getElementById('vaultAddSecretBtn').addEventListener('click', () => {
+          openDynamicModal('নতুন গোপন নোট', [
+            { name: 'title', label: 'শিরোনাম *', type: 'text', required: true, placeholder: 'যেমন: ব্যাংক / ইমেইল' },
+            { name: 'account', label: 'অ্যাকাউন্ট / আইডি', type: 'text', placeholder: 'ঐচ্ছিক' },
+            { name: 'note', label: 'নোট *', type: 'text', required: true, placeholder: 'সংরক্ষিত নোট' },
+          ], (out) => {
+            state.secrets.push({ id: uid('sc'), title: out.title.trim(), account: out.account.trim(), note: out.note.trim() });
+            saveAppState();
+            renderVault();
+            showToast('গোপন নোট সেভ হয়েছে!', 'success');
+          });
+        });
+
+        // More: Habits, Customization & Local Backup
+        document.getElementById('moreAddHabitForm').addEventListener('submit', (e) => {
+          e.preventDefault();
+          const inp = document.getElementById('moreHabitInput');
+          const title = inp.value.trim();
+          if (!title) return;
+          state.habits.push({ id: uid('hb'), title });
+          inp.value = '';
+          saveAppState();
+          renderMore();
+          showToast('অভ্যাস যুক্ত হয়েছে!', 'success');
+        });
+
+        document.getElementById('cfgTargetInput').addEventListener('change', (e) => {
+          state.dailyTarget = Math.max(1, Number(e.target.value) || 1000);
+          saveAppState();
+          renderHome();
+        });
+        document.getElementById('cfgNameInput').addEventListener('change', (e) => {
+          state.userName = e.target.value.trim() || 'সাইফুল';
+          saveAppState();
+          renderHome();
+        });
+        document.getElementById('cfgCityInput').addEventListener('change', (e) => {
+          state.city = e.target.value.trim() || 'ঢাকা';
+          saveAppState();
+          renderHome();
+        });
+        document.getElementById('cfgNextChipInput').addEventListener('change', (e) => {
+          state.nextChip = e.target.value.trim() || 'এশা ৬:৪১';
+          saveAppState();
+          renderHome();
+        });
+
+        document.getElementById('cfgAddActCatForm').addEventListener('submit', (e) => {
+          e.preventDefault();
+          const icon = document.getElementById('cfgActIcon').value.trim() || '🎯';
+          const color = document.getElementById('cfgActColor').value || '#0F766E';
+          const name = document.getElementById('cfgActName').value.trim();
+          if (!name) return;
+          state.activityCategories.push({ id: uid('ac'), name, icon, color });
+          document.getElementById('cfgActName').value = '';
+          saveAppState();
+          renderAll();
+          showToast(`ক্যাটাগরি "${name}" যোগ হয়েছে!`, 'success');
+        });
+
+        document.getElementById('cfgAddExpCatForm').addEventListener('submit', (e) => {
+          e.preventDefault();
+          const name = document.getElementById('cfgExpCatName').value.trim();
+          if (!name) return;
+          if (!state.expenseCategories.includes(name)) state.expenseCategories.push(name);
+          document.getElementById('cfgExpCatName').value = '';
+          saveAppState();
+          renderAll();
+          showToast(`খাত "${name}" যোগ হয়েছে!`, 'success');
+        });
+
+        document.getElementById('cfgAddQuickBtnForm').addEventListener('submit', (e) => {
+          e.preventDefault();
+          const icon = document.getElementById('cfgQbIcon').value.trim() || '⚡';
+          const label = document.getElementById('cfgQbLabel').value.trim();
+          const amount = Math.max(0, Number(document.getElementById('cfgQbAmount').value) || 0);
+          if (!label) return;
+          state.quickButtons.push({
+            id: uid('qb'),
+            icon,
+            label,
+            amount,
+            actCat: state.activityCategories[0].name,
+            expCat: state.expenseCategories[0],
+            isBought: false,
+          });
+          document.getElementById('cfgQbLabel').value = '';
+          document.getElementById('cfgQbAmount').value = '';
+          saveAppState();
+          renderAll();
+          showToast(`কুইক বাটন "${label}" যোগ হয়েছে!`, 'success');
+        });
+
+        document.getElementById('btnExportJson').addEventListener('click', () => {
+          const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `dinhisab-local-backup-${selectedDate}.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+          showToast('JSON লোকাল ব্যাকআপ ডাউনলোড হয়েছে!', 'success');
+        });
+
+        document.getElementById('inputImportJson').addEventListener('change', (e) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = () => {
+            try {
+              const imp = JSON.parse(String(reader.result));
+              state = { ...createInitialState(), ...imp, isSampleData: false };
+              saveAppState();
+              applyTheme();
+              renderAll();
+              showToast('JSON ব্যাকআপ রিস্টোর হয়েছে!', 'success');
+            } catch (_err) {
+              showToast('সঠিক JSON ফাইল নয়।', 'error');
+            }
+          };
+          reader.readAsText(file);
+        });
+
+        document.getElementById('btnExportCsv').addEventListener('click', () => {
+          const rows = [['Date', 'Kind', 'Title', 'Category', 'Payment', 'Tag', 'BoughtItem', 'Amount']];
+          Object.entries(state.days || {}).forEach(([dk, d]) => {
+            (d.transactions || []).forEach((t) => {
+              rows.push([dk, t.kind, t.title, t.category, t.paymentMode, t.tag || '', t.isBoughtItem ? 'Yes' : 'No', t.amount]);
+            });
+          });
+          const csv = rows.map((r) => r.map((c) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `dinhisab-${selectedDate}.csv`;
+          a.click();
+          URL.revokeObjectURL(url);
+          showToast('CSV ফাইল এক্সপোর্ট হয়েছে!', 'success');
+        });
+
+        document.getElementById('btnLoadSample').addEventListener('click', () => {
+          state = createInitialState();
+          selectedDate = toDateKey(new Date());
+          saveAppState();
+          applyTheme();
+          renderAll();
+          showToast('নমুনা ডাটা লোড হয়েছে।', 'success');
+        });
+
+        document.getElementById('btnClearSample').addEventListener('click', () => {
+          const fresh = createInitialState();
+          fresh.isSampleData = false;
+          fresh.days = {
+            [toDateKey(new Date())]: {
+              wakeTime: '',
+              sleepTime: '',
+              mood: 4,
+              energy: 4,
+              reflection: '',
+              completedHabits: {},
+              activities: [],
+              transactions: [],
+            },
+          };
+          fresh.loans = [];
+          fresh.docRecords = [];
+          fresh.secrets = [];
+          state = fresh;
+          saveAppState();
+          renderAll();
+          showToast('সব ডাটা মুছে ফেলা হয়েছে।', 'info');
+        });
+      }
+
+      document.addEventListener('DOMContentLoaded', () => {
+        applyTheme();
+        switchTab('home');
+        bindAllEvents();
+        renderAll();
+      });
+    })();
+  </script>
+</body>
+</html>
